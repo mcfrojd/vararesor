@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { auth } from './auth.svelte';
-	import { toDateInput } from './format';
+	import { nowTime, today, toDateInput } from './format';
 	import { fieldErrors, pb, type Post, type PostDetails, type PostKind } from './pb';
 	import {
 		facilities,
@@ -36,6 +36,9 @@
 	let kind = $state<PostKind | undefined>(initial?.kind ?? initialKind);
 	// svelte-ignore state_referenced_locally
 	let day = $state(initial ? toDateInput(initial.day) : initialDay);
+	// Nytt inlägg för i dag får klockslaget nu; andra dagar lämnas tiden tom.
+	// svelte-ignore state_referenced_locally
+	let time = $state(initial ? initial.time : initialDay === today() ? nowTime() : '');
 	let title = $state(initial?.title ?? '');
 	let category = $state(initial?.category ?? '');
 	let body = $state(initial?.body ?? '');
@@ -112,6 +115,7 @@
 		const data = {
 			kind,
 			day,
+			time,
 			title: title.trim(),
 			category: config.categories.includes(category) ? category : '',
 			body: body.trim(),
@@ -175,10 +179,16 @@
 			{/if}
 		</div>
 
-		<label class="block space-y-1">
-			<span class="text-sm font-medium">Dag</span>
-			<input type="date" required bind:value={day} class={input} />
-		</label>
+		<div class="grid grid-cols-[3fr_2fr] gap-3">
+			<label class="block space-y-1">
+				<span class="text-sm font-medium">Dag</span>
+				<input type="date" required bind:value={day} class={input} />
+			</label>
+			<label class="block space-y-1">
+				<span class="text-sm font-medium">Tid</span>
+				<input type="time" bind:value={time} class={input} />
+			</label>
+		</div>
 
 		<label class="block space-y-1">
 			<span class="text-sm font-medium">{config.titleLabel}</span>

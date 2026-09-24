@@ -1,4 +1,5 @@
 import { pb, type Post, type Trip } from '$lib/pb';
+import { sortPosts } from '$lib/posts';
 
 export async function load() {
 	const [posts, trips] = await Promise.all([
@@ -9,5 +10,5 @@ export async function load() {
 		}),
 		pb.collection('trips').getFullList<Trip>({ filter: 'type = "husbil" && start_date != ""' })
 	]);
-	return { posts, husbilTrips: trips };
+	return { posts: sortPosts(posts), husbilTrips: trips };
 }

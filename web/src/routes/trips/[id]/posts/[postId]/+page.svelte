@@ -60,7 +60,7 @@
 			</p>
 			<h1 class="mt-1 text-2xl font-semibold tracking-tight">{post.title || k.label}</h1>
 			<p class="text-sm text-muted">
-				{n ? `Dag ${n} · ` : ''}{formatDay(post.day)}
+				{n ? `Dag ${n} · ` : ''}{formatDay(post.day)}{post.time ? ` · ${post.time}` : ''}
 			</p>
 		</div>
 		{#if isAuthor}

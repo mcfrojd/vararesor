@@ -16,7 +16,10 @@
 	<span class="text-2xl leading-none">{k.icon}</span>
 	<div class="min-w-0 flex-1">
 		<div class="flex items-start justify-between gap-2">
-			<p class="truncate font-medium">{post.title || k.label}</p>
+			<p class="truncate font-medium">
+				{#if post.time}<span class="mr-1 text-sm font-normal text-muted">{post.time}</span>{/if}
+				{post.title || k.label}
+			</p>
 			{#if post.expand?.author}<Avatar user={post.expand.author} size="h-6 w-6 text-[9px]" />{/if}
 		</div>
 		<p class="text-sm text-muted">

@@ -34,6 +34,17 @@ function isoDay(d: Date): string {
 	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/** Klockslaget just nu, "TT:MM". */
+export function nowTime(): string {
+	return new Date().toTimeString().slice(0, 5);
+}
+
+/** Lokal tid "TT:MM" för en tidsstämpel från PocketBase ("2026-09-24 12:00:00.000Z"). */
+export function localTime(timestamp: string): string {
+	const d = new Date(timestamp.replace(' ', 'T'));
+	return Number.isNaN(d.getTime()) ? '' : d.toTimeString().slice(0, 5);
+}
+
 /** Datumet `n` dagar före (negativt: efter) ett ÅÅÅÅ-MM-DD. */
 export function daysBefore(value: string, n: number): string {
 	const d = parseDay(value);

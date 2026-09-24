@@ -1,4 +1,4 @@
-import { dayNumber, formatDay } from './format';
+import { dayNumber, formatDay, localTime } from './format';
 import type { GeoPoint, Post, PostKind } from './pb';
 import type { MapPoint } from './TripMap.svelte';
 
@@ -58,6 +58,15 @@ export const postKinds: Record<PostKind, KindConfig> = {
 
 export const facilities = ['El', 'Vatten', 'Gråvattentömning', 'Toatömning', 'Toalett', 'Dusch', 'WiFi'];
 export const noiseLevels = ['Lugnt', 'Visst ljud', 'Högljutt'];
+
+/**
+ * Inläggen i tidsordning: dag, sedan tid. Inlägg utan tid sorteras efter när
+ * de skapades, vilket oftast är ungefär när det hände.
+ */
+export function sortPosts<T extends Post>(posts: T[]): T[] {
+	const key = (p: T) => `${p.day.slice(0, 10)} ${p.time || localTime(p.created)}`;
+	return [...posts].sort((a, b) => key(a).localeCompare(key(b)));
+}
 
 /** PocketBase lagrar en tom position som 0,0. */
 export function hasLocation(p: GeoPoint | null | undefined): p is GeoPoint {

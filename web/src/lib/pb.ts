@@ -49,6 +49,8 @@ export interface Post {
 	author: string;
 	kind: PostKind;
 	day: string;
+	/** Valfri tid "TT:MM". */
+	time: string;
 	title: string;
 	category: string;
 	body: string;

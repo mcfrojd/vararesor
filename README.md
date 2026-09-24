@@ -196,7 +196,7 @@ vararesor/
 |------------|----------|
 | `users` | Familjens konton (`name`, `email`, `avatar`). Egen registrering är avstängd; konton skapas i admin. Inloggade ser varandras namn och avatar (för att kunna välja deltagare), men e-post syns bara för en själv. |
 | `trips` | Resor: `title`, `type` (`husbil` / `semester` / `egen`), `start_date`, `end_date`, `description`, `cover`, `owner`, `participants`. Syns bara för ägaren och deltagarna. Bara ägaren kan ändra och ta bort. |
-| `posts` | Inlägg: `trip`, `author`, `kind` (`overnight` / `food` / `sight` / `note`), `day`, `title`, `category`, `body`, `rating` (0–5), `price`, `location` (geoPoint), `details` (JSON med mallens egna fält: faciliteter, betalsätt, underlag, utsikt, ljudnivå, vad vi åt, öppettider). Syns för resans ägare och deltagare, som också kan skriva. Bara författaren ändrar; författaren eller resans ägare kan ta bort. Tas bort med resan. |
+| `posts` | Inlägg: `trip`, `author`, `kind` (`overnight` / `food` / `sight` / `note`), `day`, `time` (valfri, TT:MM; utan tid sorteras inlägget efter när det skapades), `title`, `category`, `body`, `rating` (0–5), `price`, `location` (geoPoint), `details` (JSON med mallens egna fält: faciliteter, betalsätt, underlag, utsikt, ljudnivå, vad vi åt, öppettider). Syns för resans ägare och deltagare, som också kan skriva. Bara författaren ändrar; författaren eller resans ägare kan ta bort. Tas bort med resan. |
 
 ### Karta
 
