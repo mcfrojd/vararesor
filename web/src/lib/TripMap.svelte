@@ -98,23 +98,28 @@
 	$effect(() => {
 		const m = map;
 		if (!m) return;
+		// Läs allt synkront här: det som bara läses i .then() nedan spåras inte
+		// av Svelte, och då ritas kartan inte om när filtret ändras.
+		const pts = points;
+		const trk = tracks;
+		const dashed = connect;
 		let markers: Marker[] = [];
 		let cancelled = false;
 
 		const lines = [
-			...tracks.map((coordinates) => ({
+			...trk.map((coordinates) => ({
 				type: 'Feature' as const,
 				properties: { dashed: false },
 				geometry: { type: 'LineString' as const, coordinates }
 			})),
-			...(connect && points.length > 1
+			...(dashed && pts.length > 1
 				? [
 						{
 							type: 'Feature' as const,
 							properties: { dashed: true },
 							geometry: {
 								type: 'LineString' as const,
-								coordinates: points.map((p) => [p.lon, p.lat])
+								coordinates: pts.map((p) => [p.lon, p.lat])
 							}
 						}
 					]
@@ -140,7 +145,7 @@
 
 		import('maplibre-gl').then(({ Marker, Popup, LngLatBounds }) => {
 			if (cancelled) return;
-			markers = points.map((p) =>
+			markers = pts.map((p) =>
 				new Marker({ element: markerElement(p) })
 					.setLngLat([p.lon, p.lat])
 					.setPopup(new Popup({ offset: 22, closeButton: false }).setDOMContent(popupContent(p)))
@@ -148,11 +153,11 @@
 			);
 
 			const bounds = new LngLatBounds();
-			points.forEach((p) => bounds.extend([p.lon, p.lat]));
-			tracks.forEach((line) => line.forEach((c) => bounds.extend(c)));
+			pts.forEach((p) => bounds.extend([p.lon, p.lat]));
+			trk.forEach((line) => line.forEach((c) => bounds.extend(c)));
 			if (bounds.isEmpty()) return;
-			const single = points.length === 1 && tracks.length === 0;
-			if (single) m.jumpTo({ center: [points[0].lon, points[0].lat], zoom: 13 });
+			const single = pts.length === 1 && trk.length === 0;
+			if (single) m.jumpTo({ center: [pts[0].lon, pts[0].lat], zoom: 13 });
 			else m.fitBounds(bounds, { padding: 48, maxZoom: 14, duration: 0 });
 		});
 

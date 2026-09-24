@@ -30,3 +30,11 @@ html {
 body {
 	@apply bg-paper text-ink font-sans antialiased;
 }
+
+/* Rullbar rad utan synlig rullningslist (t.ex. kartfiltret på mobilen). */
+@utility no-scrollbar {
+	scrollbar-width: none;
+	&::-webkit-scrollbar {
+		display: none;
+	}
+}

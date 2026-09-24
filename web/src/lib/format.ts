@@ -34,6 +34,13 @@ function isoDay(d: Date): string {
 	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/** Datumet `n` dagar före (negativt: efter) ett ÅÅÅÅ-MM-DD. */
+export function daysBefore(value: string, n: number): string {
+	const d = parseDay(value);
+	d.setDate(d.getDate() - n);
+	return isoDay(d);
+}
+
 /** "mån 24 aug" */
 export function formatDay(value: string): string {
 	return dayFmt.format(parseDay(value));

@@ -22,19 +22,29 @@ function parseKml(text: string): Line[] {
 		.filter((line) => line.length > 1);
 }
 
-/** Hämtar spåren för dagarna (ÅÅÅÅ-MM-DD). Dagar utan spår hoppas över. */
-export async function loadDorisTracks(days: string[]): Promise<Line[]> {
-	const results = await Promise.all(
-		days.map(async (day) => {
-			try {
-				const res = await fetch(`${TRACKS_URL}/doris-${day}.kml`);
+// Spåren ändras inte i efterhand, så de hämtas bara en gång per dag och sidvisning.
+const cache = new Map<string, Promise<Line[]>>();
+
+function loadDay(day: string): Promise<Line[]> {
+	let p = cache.get(day);
+	if (!p) {
+		p = fetch(`${TRACKS_URL}/doris-${day}.kml`)
+			.then(async (res) => {
 				// Saknas filen svarar sajten med sin 404-sida i HTML.
 				if (!res.ok || !res.headers.get('content-type')?.includes('kml')) return [];
 				return parseKml(await res.text());
-			} catch {
+			})
+			.catch(() => {
+				cache.delete(day); // försök igen nästa gång, t.ex. när nätet är tillbaka
 				return [];
-			}
-		})
-	);
-	return results.flat();
+			});
+		cache.set(day, p);
+	}
+	return p;
+}
+
+/** Hämtar spåren för dagarna (ÅÅÅÅ-MM-DD), per dag. Dagar utan spår får en tom lista. */
+export async function loadDorisTracks(days: string[]): Promise<Record<string, Line[]>> {
+	const lines = await Promise.all(days.map(loadDay));
+	return Object.fromEntries(days.map((d, i) => [d, lines[i]]));
 }

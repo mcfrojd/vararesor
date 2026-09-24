@@ -4,7 +4,9 @@
 	import { dayNumber, formatDateRange, formatDay, today, tripDays, tripTypes } from '$lib/format';
 	import { pb, type Post } from '$lib/pb';
 	import PostCard from '$lib/PostCard.svelte';
-	import { mapPoints } from '$lib/posts';
+	import MapFilter from '$lib/MapFilter.svelte';
+	import { countByKind, defaultFilter, filterPosts, filterRange, inRange } from '$lib/mapFilter';
+	import { hasLocation, mapPoints } from '$lib/posts';
 	import { loadDorisTracks, type Line } from '$lib/tracks';
 	import TripMap from '$lib/TripMap.svelte';
 
@@ -26,20 +28,32 @@
 	const days = $derived(tripDays(trip.start_date, trip.end_date, Object.keys(postsByDay)));
 	const todayDay = today();
 
-	const points = $derived(mapPoints(data.posts, trip.start_date));
+	// Kartan: filter för typ, period och spår. Sparas inte; varje resa börjar med allt.
+	let filter = $state(defaultFilter());
+	const located = $derived(data.posts.filter((p) => hasLocation(p.location)));
+	const points = $derived(mapPoints(filterPosts(located, filter), trip.start_date));
+	const counts = $derived(countByKind(located, filter));
 
-	// Husbilsresor: hämta Doris körda spår för de dagar som varit.
-	let tracks = $state<Line[]>([]);
+	// Husbilsresor: hämta Doris körda spår för alla dagar som varit, en gång.
+	let tracksByDay = $state<Record<string, Line[]>>({});
 	$effect(() => {
-		tracks = [];
+		tracksByDay = {};
 		if (trip.type !== 'husbil') return;
 		let cancelled = false;
 		loadDorisTracks(days.filter((d) => d < todayDay)).then((t) => {
-			if (!cancelled) tracks = t;
+			if (!cancelled) tracksByDay = t;
 		});
 		return () => {
 			cancelled = true;
 		};
+	});
+	const hasTracks = $derived(Object.values(tracksByDay).some((l) => l.length > 0));
+	const tracks = $derived.by(() => {
+		if (!filter.tracks) return [];
+		const r = filterRange(filter);
+		return Object.entries(tracksByDay)
+			.filter(([day]) => inRange(day, r))
+			.flatMap(([, lines]) => lines);
 	});
 </script>
 
@@ -89,11 +103,16 @@
 	</div>
 </article>
 
-{#if points.length > 0 || tracks.length > 0}
+{#if located.length > 0 || hasTracks}
 	<section class="mt-8">
 		<h2 class="mb-3 text-xl font-semibold tracking-tight">Karta</h2>
+		<div class="mb-3">
+			<MapFilter bind:filter {counts} tracksAvailable={hasTracks} />
+		</div>
 		<TripMap {points} {tracks} connect={tracks.length === 0} />
-		{#if tracks.length > 0}
+		{#if points.length === 0 && tracks.length === 0}
+			<p class="mt-2 text-sm text-muted">Inget att visa med det här filtret.</p>
+		{:else if tracks.length > 0}
 			<p class="mt-2 text-xs text-muted">Heldragen linje: Doris körda spår.</p>
 		{:else if points.length > 1}
 			<p class="mt-2 text-xs text-muted">Streckad linje: ungefärlig rutt mellan inläggen.</p>
