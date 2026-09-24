@@ -1,10 +1,17 @@
 import { error } from '@sveltejs/kit';
-import { pb, type Trip } from '$lib/pb';
+import { pb, type Post, type Trip } from '$lib/pb';
 
 export async function load({ params }) {
 	try {
-		const trip = await pb.collection('trips').getOne<Trip>(params.id, { expand: 'owner,participants' });
-		return { trip };
+		const [trip, posts] = await Promise.all([
+			pb.collection('trips').getOne<Trip>(params.id, { expand: 'owner,participants' }),
+			pb.collection('posts').getFullList<Post>({
+				filter: pb.filter('trip = {:trip}', { trip: params.id }),
+				sort: 'day,created',
+				expand: 'author'
+			})
+		]);
+		return { trip, posts };
 	} catch {
 		error(404, 'Resan finns inte, eller så har du inte tillgång till den.');
 	}

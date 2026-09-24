@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { auth } from '$lib/auth.svelte';
 	import Avatar from '$lib/Avatar.svelte';
-	import { formatDateRange, tripTypes } from '$lib/format';
-	import { pb } from '$lib/pb';
+	import { dayNumber, formatDateRange, formatDay, today, tripDays, tripTypes } from '$lib/format';
+	import { pb, type Post } from '$lib/pb';
+	import PostCard from '$lib/PostCard.svelte';
 
 	let { data } = $props();
 
@@ -12,6 +13,15 @@
 		...(trip.expand?.owner ? [trip.expand.owner] : []),
 		...(trip.expand?.participants ?? [])
 	]);
+
+	const postsByDay = $derived(
+		data.posts.reduce<Record<string, Post[]>>((acc, post) => {
+			(acc[post.day.slice(0, 10)] ??= []).push(post);
+			return acc;
+		}, {})
+	);
+	const days = $derived(tripDays(trip.start_date, trip.end_date, Object.keys(postsByDay)));
+	const todayDay = today();
 </script>
 
 <svelte:head><title>{trip.title} · Våra resor</title></svelte:head>
@@ -60,6 +70,50 @@
 	</div>
 </article>
 
-<div class="mt-6 rounded-2xl border border-dashed border-line p-8 text-center text-sm text-muted">
-	Dagar och inlägg kommer här.
-</div>
+<section class="mt-8">
+	<div class="mb-3 flex items-center justify-between">
+		<h2 class="text-xl font-semibold tracking-tight">Dagar</h2>
+		<a
+			href="/trips/{trip.id}/posts/new"
+			class="rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-paper"
+		>
+			+ Nytt inlägg
+		</a>
+	</div>
+
+	{#if days.length === 0}
+		<div class="rounded-2xl border border-dashed border-line p-8 text-center text-sm text-muted">
+			Inga inlägg än. Lägg till ett, eller sätt datum på resan så visas dagarna här.
+		</div>
+	{:else}
+		<ol class="space-y-6">
+			{#each days as day (day)}
+				{@const n = dayNumber(trip.start_date, day)}
+				{@const posts = postsByDay[day] ?? []}
+				<li id="dag-{day}" class="scroll-mt-20">
+					<div class="mb-2 flex items-baseline justify-between gap-3">
+						<h3 class="font-semibold">
+							{n ? `Dag ${n}` : 'Före resan'}
+							<span class="font-normal text-muted">· {formatDay(day)}</span>
+							{#if day === todayDay}
+								<span class="ml-1 rounded-full bg-accent-soft px-2 py-0.5 text-xs text-accent">i dag</span>
+							{/if}
+						</h3>
+						<a href="/trips/{trip.id}/posts/new?day={day}" class="text-sm text-accent hover:underline">
+							+ Lägg till
+						</a>
+					</div>
+					{#if posts.length > 0}
+						<ul class="space-y-2">
+							{#each posts as post (post.id)}
+								<li><PostCard {post} /></li>
+							{/each}
+						</ul>
+					{:else}
+						<p class="border-l-2 border-line pl-3 text-sm text-muted">Inget än.</p>
+					{/if}
+				</li>
+			{/each}
+		</ol>
+	{/if}
+</section>

@@ -23,6 +23,45 @@ export interface Trip {
 	};
 }
 
+export type PostKind = 'overnight' | 'food' | 'sight' | 'note';
+
+export interface GeoPoint {
+	lat: number;
+	lon: number;
+}
+
+/** Mallspecifika fält. Vilka som används beror på inläggets typ. */
+export interface PostDetails {
+	payment?: string;
+	facilities?: string[];
+	surface?: string;
+	view?: string;
+	noise?: string;
+	what?: string;
+	hours?: string;
+}
+
+export interface Post {
+	id: string;
+	collectionId: string;
+	collectionName: string;
+	trip: string;
+	author: string;
+	kind: PostKind;
+	day: string;
+	title: string;
+	category: string;
+	body: string;
+	rating: number;
+	price: string;
+	location: GeoPoint;
+	details: PostDetails | null;
+	created: string;
+	expand?: {
+		author?: User;
+	};
+}
+
 export interface User {
 	id: string;
 	collectionId: string;

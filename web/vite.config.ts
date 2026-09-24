@@ -9,6 +9,10 @@ export default defineConfig({
 		sveltekit(),
 		SvelteKitPWA({
 			registerType: 'autoUpdate',
+			// Fast sökväg, annars registreras ./sw.js relativt sidan och en djuplänk
+			// som /trips/abc får HTML i stället för service workern.
+			base: '/',
+			scope: '/',
 			manifest: {
 				name: 'Våra resor',
 				short_name: 'Våra resor',
