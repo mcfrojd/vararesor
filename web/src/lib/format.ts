@@ -92,6 +92,24 @@ export function defaultDay(start: string, end: string): string {
 	return s;
 }
 
+export type TripStatus = 'ongoing' | 'upcoming' | 'past';
+
+/**
+ * Pågår: startat och inte slutat (utan slutdatum räknas resan som pågående).
+ * Kommande: startar senare, eller saknar datum (planer). Annars tidigare.
+ */
+export function tripStatus(start: string, end: string): TripStatus {
+	const t = today();
+	if (!start || toDateInput(start) > t) return 'upcoming';
+	if (!end || toDateInput(end) >= t) return 'ongoing';
+	return 'past';
+}
+
+/** Antal dagar från i dag till ett datum (negativt om det varit). */
+export function daysUntil(value: string): number {
+	return Math.round((parseDay(value).getTime() - parseDay(today()).getTime()) / 86_400_000);
+}
+
 export function formatDateRange(start: string, end: string): string {
 	if (!start) return '';
 	const s = dateFmt.format(parseDay(start));

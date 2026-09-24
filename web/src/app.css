@@ -31,6 +31,17 @@ body {
 	@apply bg-paper text-ink font-sans antialiased;
 }
 
+/* Omslag för resor utan bild: färg efter resetyp. */
+.cover-husbil {
+	background: linear-gradient(135deg, #2f5d50, #6f9a86);
+}
+.cover-semester {
+	background: linear-gradient(135deg, #b5793a, #e3b56f);
+}
+.cover-egen {
+	background: linear-gradient(135deg, #3d5a80, #7fa3c8);
+}
+
 /* Rullbar rad utan synlig rullningslist (t.ex. kartfiltret på mobilen). */
 @utility no-scrollbar {
 	scrollbar-width: none;
