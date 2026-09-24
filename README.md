@@ -2,7 +2,7 @@
 
 En enkel och stilren resedagbok för familjen, byggd som en **PWA** (Progressive Web App).
 
-> Status: tidigt skelett (inloggning + resa-lista). Dokumentet beskriver vad appen ska bli och fylls på efter hand.
+> Status: tidigt skede (inloggning, skapa och redigera resor). Dokumentet beskriver vad appen ska bli och fylls på efter hand.
 
 ---
 
@@ -184,14 +184,15 @@ vararesor/
 └── web/                     SvelteKit-appen
     └── src/
         ├── lib/             PocketBase-klient, inloggning, hjälpfunktioner
-        └── routes/          sidor: / (resor), /login
+        └── routes/          sidor: / (resor), /login, /trips/new,
+                             /trips/[id], /trips/[id]/edit
 ```
 
 ### Databas (hittills)
 
 | Collection | Innehåll |
 |------------|----------|
-| `users` | Familjens konton (`name`, `email`, `avatar`). Egen registrering är avstängd; konton skapas i admin. |
+| `users` | Familjens konton (`name`, `email`, `avatar`). Egen registrering är avstängd; konton skapas i admin. Inloggade ser varandras namn och avatar (för att kunna välja deltagare), men e-post syns bara för en själv. |
 | `trips` | Resor: `title`, `type` (`husbil` / `semester` / `egen`), `start_date`, `end_date`, `description`, `cover`, `owner`, `participants`. Syns bara för ägaren och deltagarna. Bara ägaren kan ändra och ta bort. |
 
 ## 9. Kom igång
@@ -251,7 +252,7 @@ npm run dev                          # appen på :5173, /api skickas vidare till
 
 1. ~~Välja frontend-ramverk.~~ SvelteKit.
 2. ~~Skelett med PocketBase + SvelteKit i Docker, inloggning och resa-lista.~~
-3. Skapa och redigera resor (inklusive omslagsbild och deltagare).
+3. ~~Skapa och redigera resor (inklusive omslagsbild och deltagare).~~
 4. Dagar och inlägg med mallar (övernattning, mat och dryck, sevärdhet, fri anteckning).
 5. Bilduppladdning med `.webp`-skalning och S3 mot Synology.
 6. Dagssammanfattning och publicering till husbilendoris.se.
