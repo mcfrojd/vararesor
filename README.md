@@ -88,6 +88,28 @@ Varje dag har en **publiceringsstatus**:
 
 Man kan alltså **gå tillbaka** och publicera dagar man missat, eller **uppdatera** tidigare dagar i efterhand.
 
+### Hur publiceringen fungerar
+
+husbilendoris.se är en statisk sajt (Hugo) som ligger i ett privat GitHub-repo (`hugo-mcfrojd/husbil`). Varje ändring i repot publiceras automatiskt via **Cloudflare Pages**.
+
+Publicering från appen blir därför en **commit till det repot**:
+
+```
+Våra resor (PocketBase)
+   │  1. Bygger dagens inlägg som Markdown (front matter + text)
+   │  2. Skalar om valda bilder till webbstorlek
+   ▼
+GitHub API  →  commit till hugo-mcfrojd/husbil
+   ▼
+Cloudflare Pages bygger och publicerar husbilendoris.se
+```
+
+- Varje dag blir **en Markdown-fil** (t.ex. `content/<resa>/<datum>.md`) med bilder bredvid, enligt sajtens befintliga struktur.
+- Filen har en **fast sökväg** per dag. En ompublicering skriver över samma fil i stället för att skapa en ny.
+- Allt skickas i **en commit per publicering**, så att sajten byggs en gång.
+- Anropet görs från servern (PocketBase), aldrig från webbläsaren. GitHub-token är en *fine-grained* token med skrivrätt bara till `husbil`-repot och sparas som hemlighet på servern.
+- Appen sparar vilken commit och vilket innehåll som publicerades. Då kan den visa om dagen ändrats efter publicering.
+
 ## 7. Bilder och film
 
 - Original lagras på vår privata **S3-lagring** (Synology hemma).
@@ -103,6 +125,7 @@ Man kan alltså **gå tillbaka** och publicera dagar man missat, eller **uppdate
 | Backup | PocketBase inbyggda S3-backup |
 | Frontend | PWA (ramverk ej bestämt) |
 | Drift | Docker / docker compose |
+| Publicering | GitHub API → `hugo-mcfrojd/husbil` → Cloudflare Pages |
 
 ## 9. Drift och hosting
 
@@ -120,7 +143,9 @@ docker compose up -d
 
 ## 10. Öppna frågor
 
-- [ ] Vad körs husbilendoris.se på (WordPress eller annat)? Det avgör hur publiceringen byggs.
+- [x] Vad körs husbilendoris.se på? **Hugo i GitHub-repot `hugo-mcfrojd/husbil`, publiceras via Cloudflare Pages.**
+- [ ] Hur ser innehållsstrukturen i `husbil`-repot ut idag (mappar, front matter, bildhantering, page bundles)? Appens export ska matcha den.
+- [ ] Ska bilder till hemsidan ligga i `husbil`-repot, eller länkas från en publik lagring (t.ex. Cloudflare R2) så att repot inte växer?
 - [ ] Behövs offline-stöd när vi står utan täckning, med synk när nätet kommer tillbaka?
 - [ ] Karta och GPS: automatisk position på inlägg? Spåra rutten under dagen?
 - [ ] Vilket frontend-ramverk?
