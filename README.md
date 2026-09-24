@@ -2,7 +2,7 @@
 
 En enkel och stilren resedagbok för familjen, byggd som en **PWA** (Progressive Web App).
 
-> Status: tidigt skede (inloggning, resor, dagar och inlägg med mallar, karta). Bilder kommer härnäst. Dokumentet beskriver vad appen ska bli och fylls på efter hand.
+> Status: tidigt skede (inloggning, resor, dagar och inlägg med mallar, karta, offline). Bilder kommer härnäst. Dokumentet beskriver vad appen ska bli och fylls på efter hand.
 
 ---
 
@@ -163,7 +163,7 @@ Därefter kommer dagens text, Instagram-rutan, galleriet och GPS-spåret:
 | Gränssnitt | [SvelteKit](https://svelte.dev/docs/kit) (Svelte 5, TypeScript) byggd som statisk app (SPA) |
 | Utseende | [Tailwind CSS](https://tailwindcss.com/), ljust och mörkt tema efter enhetens inställning |
 | PWA | [@vite-pwa/sveltekit](https://vite-pwa-org.netlify.app/frameworks/sveltekit): manifest och service worker |
-| Offline (senare) | [Dexie](https://dexie.org/) (IndexedDB) som kö för inlägg och bilder utan täckning |
+| Offline | Service workern cachar appen, API-svar (nätet först) och bilder. Nya inlägg utan täckning köas i [Dexie](https://dexie.org/) (IndexedDB) och skickas när nätet är tillbaka. |
 | Karta | [MapLibre GL](https://maplibre.org/) med gratis kartor från [OpenFreeMap](https://openfreemap.org/) (OpenStreetMap-data, ingen API-nyckel). Husbilsresor visar Doris körda spår. |
 | Bilder | Skalas om till `.webp` i mobilen före uppladdning; originalet sparas också |
 | Fillagring | S3 (Synology) via PocketBase |
@@ -208,6 +208,13 @@ vararesor/
 - **Spår på /karta:** för husbilsresornas dagar inom perioden, högst de 60 senaste dagarna åt gången.
 
 Kartbilderna hämtas från OpenFreeMap och sparas inte offline än.
+
+### Offline
+
+- **Läsa:** appen startar utan nät. Resor, inlägg och bilder man redan öppnat visas från cachen (nätet går först, cachen används när det inte svarar inom 6 s).
+- **Skriva:** nya inlägg utan nät (eller när anropet inte kommer fram) läggs i en kö på enheten och visas streckade med "Väntar på nät". Kön skickas när nätet kommer tillbaka och var 30:e sekund. Inlägget får sitt id i appen, så ett nytt försök skapar aldrig dubbletter.
+- **Inte offline än:** ändra eller ta bort befintliga inlägg, skapa resor, kartbilder.
+- **Utloggning** tömmer kön och cachen på enheten, och varnar om något inte skickats.
 
 Dagarna räknas fram ur resans datum (dag 1 = startdatum) och inläggens `day`; det finns ingen egen tabell för dagar än. Den kommer med publiceringen, där varje dag behöver egen status, sammanfattning och commit.
 
@@ -258,7 +265,7 @@ npm run dev                          # appen på :5173, /api skickas vidare till
 - [x] Innehållsstruktur? **Page bundles `content/resor/<resa>/dagNN/` med `index.md`, `cover.webp` och `images/` (se avsnitt 6).**
 - [ ] Bilderna ligger i repot idag (`content/resor` är ca 150 MB). Ska det fortsätta så, eller ska bilderna på sikt ligga i en publik lagring (t.ex. Cloudflare R2)?
 - [x] Ska Traccar-spåren även visas i appen? **Ja, på husbilsresornas karta. Appen läser `husbilendoris.se/tracks/doris-ÅÅÅÅ-MM-DD.kml` direkt (publika, CORS öppet).**
-- [ ] Behövs offline-stöd när vi står utan täckning, med synk när nätet kommer tillbaka?
+- [x] Behövs offline-stöd när vi står utan täckning? **Ja: läsa det man redan öppnat och skriva nya inlägg, som skickas när nätet är tillbaka.**
 - [ ] Karta och GPS: automatisk position på inlägg? Spåra rutten under dagen?
 - [x] Vilket frontend-ramverk? **SvelteKit.**
 - [ ] Hur ska film hanteras (storlek, komprimering, publicering)?
@@ -272,4 +279,4 @@ npm run dev                          # appen på :5173, /api skickas vidare till
 4. ~~Dagar och inlägg med mallar (övernattning, mat och dryck, sevärdhet, fri anteckning).~~
 5. Bilduppladdning med `.webp`-skalning och S3 mot Synology.
 6. Dagssammanfattning och publicering till husbilendoris.se.
-7. Offline-kö. ~~Karta.~~
+7. ~~Offline-kö. Karta.~~

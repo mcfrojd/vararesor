@@ -37,10 +37,12 @@ Klart:
 - Resor (`trips`): skapa, visa, redigera, ta bort, omslagsbild och deltagare. Bara ägare/deltagare ser, bara ägaren ändrar.
 - Dagar och inlägg (`posts`) med mallar: övernattning, mat och dryck, sevärdhet, anteckning. Dagarna räknas fram ur resans datum.
 - Karta (MapLibre + OpenFreeMap, ingen nyckel) på resa, inlägg och `/karta`, med Doris GPS-spår och filter för typ, spår och period.
+- Tid på inlägg, startsida med pågående/kommande/tidigare resor.
+- Offline: appen och lästa data cachas av service workern; nya inlägg köas i Dexie (`src/lib/offline.svelte.ts`) och skickas när nätet är tillbaka.
 
-Nästa steg: se avsnitt 11 i README.md (bilder med webp-skalning och S3 → publicering → offline).
+Nästa steg: bilder med webp-skalning och S3 (väntar tills användaren är vid datorn). Publicering till husbilendoris.se väntar också.
 
-Tips vid test: skapa en tillfällig superuser och testkonton `*@example.com`, och ta bort dem efteråt. MapLibre i headless Chromium behöver `--use-angle=swiftshader --enable-unsafe-swiftshader`.
+Tips vid test: skapa en tillfällig superuser och testkonton `*@example.com`, och ta bort dem efteråt. MapLibre i headless Chromium behöver `--use-angle=swiftshader --enable-unsafe-swiftshader`. Offline testas med `context.setOffline(true)` efter att service workern tagit kontroll (`navigator.serviceWorker.controller`).
 
 ## Publicering till husbilendoris.se
 

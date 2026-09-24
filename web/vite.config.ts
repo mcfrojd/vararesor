@@ -13,6 +13,9 @@ export default defineConfig({
 			// som /trips/abc får HTML i stället för service workern.
 			base: '/',
 			scope: '/',
+			// adapter-static skriver index.html efter att service workern byggts, så
+			// den måste läggas till här. Annars startar appen inte utan nät.
+			kit: { adapterFallback: 'index.html', spa: { fallbackMapping: '/' } },
 			manifest: {
 				name: 'Våra resor',
 				short_name: 'Våra resor',
@@ -33,7 +36,32 @@ export default defineConfig({
 				globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
 				navigateFallback: '/',
 				// PocketBase API och admin ska aldrig besvaras från cachen.
-				navigateFallbackDenylist: [/^\/api\//, /^\/_\//]
+				navigateFallbackDenylist: [/^\/api\//, /^\/_\//],
+				// Offline: svar från API:t och bilder sparas när de hämtas, så att resor
+				// och inlägg man redan öppnat går att läsa utan nät. Nätet går först;
+				// cachen används bara när det inte svarar. Namnen börjar med "api-" så
+				// att utloggningen kan tömma dem.
+				runtimeCaching: [
+					{
+						urlPattern: ({ url, request }) =>
+							request.method === 'GET' && /^\/api\/collections\/[^/]+\/records/.test(url.pathname),
+						handler: 'NetworkFirst',
+						options: {
+							cacheName: 'api-data',
+							networkTimeoutSeconds: 6,
+							expiration: { maxEntries: 300 }
+						}
+					},
+					{
+						urlPattern: ({ url }) => url.pathname.startsWith('/api/files/'),
+						handler: 'CacheFirst',
+						options: {
+							cacheName: 'api-files',
+							expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 90 },
+							cacheableResponse: { statuses: [200] }
+						}
+					}
+				]
 			}
 		})
 	],

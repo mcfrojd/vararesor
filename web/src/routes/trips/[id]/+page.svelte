@@ -2,11 +2,12 @@
 	import { auth } from '$lib/auth.svelte';
 	import Avatar from '$lib/Avatar.svelte';
 	import { dayNumber, formatDateRange, formatDay, today, tripDays, tripTypes } from '$lib/format';
+	import { offline, removeQueued } from '$lib/offline.svelte';
 	import { pb, type Post } from '$lib/pb';
 	import PostCard from '$lib/PostCard.svelte';
 	import MapFilter from '$lib/MapFilter.svelte';
 	import { countByKind, defaultFilter, filterPosts, filterRange, inRange } from '$lib/mapFilter';
-	import { hasLocation, mapPoints } from '$lib/posts';
+	import { hasLocation, mapPoints, sortPosts } from '$lib/posts';
 	import { loadDorisTracks, type Line } from '$lib/tracks';
 	import TripMap from '$lib/TripMap.svelte';
 
@@ -19,8 +20,31 @@
 		...(trip.expand?.participants ?? [])
 	]);
 
+	// Köade inlägg (skapade utan nät) visas med de riktiga tills de skickats.
+	const queued = $derived(
+		offline.queue.filter((q) => q.data.trip === trip.id && !data.posts.some((p) => p.id === q.id))
+	);
+	const queuedById = $derived(Object.fromEntries(queued.map((q) => [q.id, q])));
+	const allPosts = $derived(
+		sortPosts([
+			...data.posts,
+			...queued.map((q) => ({
+				...q.data,
+				collectionId: '',
+				collectionName: 'posts',
+				created: q.queuedAt.replace('T', ' '),
+				expand: auth.user ? { author: auth.user } : undefined
+			}))
+		])
+	);
+
+	function removePending(id: string) {
+		if (confirm('Ta bort inlägget? Det har inte skickats och finns bara på den här enheten.'))
+			void removeQueued(id);
+	}
+
 	const postsByDay = $derived(
-		data.posts.reduce<Record<string, Post[]>>((acc, post) => {
+		allPosts.reduce<Record<string, Post[]>>((acc, post) => {
 			(acc[post.day.slice(0, 10)] ??= []).push(post);
 			return acc;
 		}, {})
@@ -30,7 +54,7 @@
 
 	// Kartan: filter för typ, period och spår. Sparas inte; varje resa börjar med allt.
 	let filter = $state(defaultFilter());
-	const located = $derived(data.posts.filter((p) => hasLocation(p.location)));
+	const located = $derived(allPosts.filter((p) => hasLocation(p.location)));
 	const points = $derived(mapPoints(filterPosts(located, filter), trip.start_date));
 	const counts = $derived(countByKind(located, filter));
 
@@ -156,7 +180,14 @@
 					{#if posts.length > 0}
 						<ul class="space-y-2">
 							{#each posts as post (post.id)}
-								<li><PostCard {post} /></li>
+								{@const q = queuedById[post.id]}
+								<li>
+									{#if q}
+										<PostCard {post} pending error={q.error} onremove={() => removePending(post.id)} />
+									{:else}
+										<PostCard {post} />
+									{/if}
+								</li>
 							{/each}
 						</ul>
 					{:else}

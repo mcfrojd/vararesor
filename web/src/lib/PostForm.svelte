@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { auth } from './auth.svelte';
 	import { nowTime, today, toDateInput } from './format';
+	import { enqueue, isNetworkError, newId, timeout } from './offline.svelte';
 	import { fieldErrors, pb, type Post, type PostDetails, type PostKind } from './pb';
 	import {
 		facilities,
@@ -24,7 +25,8 @@
 		post?: Post;
 		kind?: PostKind;
 		day: string;
-		onsaved: (post: Post) => void;
+		/** `queued` = sparat på enheten, skickas när nätet är tillbaka. */
+		onsaved: (post: Pick<Post, 'id' | 'day'>, queued?: boolean) => void;
 		oncancel: () => void;
 	} = $props();
 
@@ -127,15 +129,32 @@
 
 		busy = true;
 		try {
-			const saved = initial
-				? await pb.collection('posts').update<Post>(initial.id, data)
-				: await pb
-						.collection('posts')
-						.create<Post>({ ...data, trip: tripId, author: auth.user?.id });
-			onsaved(saved);
+			if (initial) {
+				onsaved(await pb.collection('posts').update<Post>(initial.id, data, { signal: timeout() }));
+				return;
+			}
+			// Nytt inlägg: id:t sätts här, så att det kan köas och skickas om utan dubbletter.
+			const record = { ...data, id: newId(), trip: tripId, author: auth.user?.id ?? '' };
+			if (!navigator.onLine) {
+				await enqueue(record);
+				onsaved(record, true);
+				return;
+			}
+			try {
+				onsaved(await pb.collection('posts').create<Post>(record, { signal: timeout() }));
+			} catch (err) {
+				if (!isNetworkError(err)) throw err;
+				await enqueue(record);
+				onsaved(record, true);
+			}
 		} catch (err) {
 			errors = fieldErrors(err);
-			if (Object.keys(errors).length === 0) errors = { form: 'Kunde inte spara inlägget.' };
+			if (Object.keys(errors).length === 0)
+				errors = {
+					form: isNetworkError(err)
+						? 'Ingen kontakt med servern. Ändringar av befintliga inlägg kan inte sparas utan nät.'
+						: 'Kunde inte spara inlägget.'
+				};
 		} finally {
 			busy = false;
 		}
