@@ -105,133 +105,126 @@
 		}
 	}
 
-	const input =
-		'w-full rounded-xl border border-line bg-card px-3 py-2.5 outline-none focus:border-accent';
+	const input = 'field';
 </script>
 
-<form onsubmit={submit} class="space-y-5">
-	<label class="block space-y-1">
-		<span class="text-sm font-medium">Namn på resan</span>
-		<input
-			required
-			maxlength="200"
-			bind:value={title}
-			placeholder="t.ex. Tyskland 2026"
-			class={input}
-		/>
-		{#if errors.title}<span class="text-sm text-red-600">{errors.title}</span>{/if}
-	</label>
-
-	<fieldset class="space-y-1">
-		<legend class="mb-1 text-sm font-medium">Typ av resa</legend>
-		<div class="grid grid-cols-3 gap-2">
-			{#each Object.entries(tripTypes) as [value, t] (value)}
-				<label
-					class="flex cursor-pointer flex-col items-center gap-1 rounded-xl border px-2 py-3 text-sm
-						{type === value ? 'border-accent bg-accent-soft font-medium' : 'border-line bg-card'}"
-				>
-					<input type="radio" name="type" {value} bind:group={type} class="sr-only" />
-					<span class="text-2xl">{t.icon}</span>
-					{t.label}
-				</label>
-			{/each}
-		</div>
-	</fieldset>
-
-	<div class="grid grid-cols-2 gap-3">
-		<label class="block space-y-1">
-			<span class="text-sm font-medium">Från</span>
-			<input type="date" bind:value={startDate} class={input} />
-		</label>
-		<label class="block space-y-1">
-			<span class="text-sm font-medium">Till</span>
-			<input type="date" bind:value={endDate} min={startDate || undefined} class={input} />
-		</label>
-		{#if errors.start_date || errors.end_date}
-			<p class="col-span-2 text-sm text-red-600">{errors.start_date || errors.end_date}</p>
-		{/if}
-	</div>
-
-	<label class="block space-y-1">
-		<span class="text-sm font-medium">Beskrivning</span>
-		<textarea
-			rows="4"
-			maxlength="5000"
-			bind:value={description}
-			placeholder="Vart ska ni, och varför?"
-			class={input}
-		></textarea>
-	</label>
-
-	<div class="space-y-1">
-		<span class="text-sm font-medium">Omslagsbild</span>
-		{#if coverPreview || existingCover}
-			<div class="relative overflow-hidden rounded-xl border border-line">
-				<img src={coverPreview || existingCover} alt="" class="aspect-video w-full object-cover" />
-				<button
-					type="button"
-					onclick={removeCover}
-					class="absolute right-2 top-2 rounded-full bg-black/60 px-3 py-1 text-sm text-white"
-				>
-					Ta bort
-				</button>
-			</div>
-		{/if}
-		<label
-			class="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-line bg-card px-3 py-4 text-sm text-muted hover:border-accent"
-		>
+<form onsubmit={submit} class="space-y-4">
+	<div class="card space-y-5 p-5">
+		<label class="block space-y-1.5">
+			<span class="label">Namn på resan</span>
 			<input
-				type="file"
-				accept="image/jpeg,image/png,image/webp,image/heic"
-				onchange={pickCover}
-				class="sr-only"
+				required
+				maxlength="200"
+				bind:value={title}
+				placeholder="t.ex. Tyskland 2026"
+				class={input}
 			/>
-			{coverPreview || existingCover ? 'Byt bild' : '📷 Välj bild'}
+			{#if errors.title}<span class="text-sm text-red-600">{errors.title}</span>{/if}
 		</label>
-		{#if errors.cover}<span class="text-sm text-red-600">{errors.cover}</span>{/if}
-	</div>
 
-	{#if others.length > 0}
-		<fieldset class="space-y-1">
-			<legend class="mb-1 text-sm font-medium">Deltagare</legend>
-			<p class="mb-2 text-sm text-muted">Deltagare ser resan och kan bidra med inlägg.</p>
-			<div class="flex flex-wrap gap-2">
-				{#each others as user (user.id)}
-					{@const selected = participants.includes(user.id)}
-					<button
-						type="button"
-						aria-pressed={selected}
-						onclick={() => toggleParticipant(user.id)}
-						class="flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-sm
-							{selected ? 'border-accent bg-accent-soft font-medium' : 'border-line bg-card'}"
+		<fieldset>
+			<legend class="label mb-2">Typ av resa</legend>
+			<div class="grid grid-cols-3 gap-2">
+				{#each Object.entries(tripTypes) as [value, t] (value)}
+					<label
+						class="flex cursor-pointer flex-col items-center gap-1 rounded-2xl border px-2 py-3 text-sm transition
+							{type === value
+							? 'border-transparent bg-rust-soft font-semibold text-rust'
+							: 'border-line bg-field text-body'}"
 					>
-						<Avatar {user} size="h-7 w-7 text-[10px]" />
-						{user.name || user.email}
-						{#if selected}<span class="text-accent">✓</span>{/if}
-					</button>
+						<input type="radio" name="type" {value} bind:group={type} class="sr-only" />
+						<span class="text-2xl">{t.icon}</span>
+						{t.label}
+					</label>
 				{/each}
 			</div>
 		</fieldset>
-	{/if}
+
+		<div class="grid grid-cols-2 gap-3">
+			<label class="block space-y-1.5">
+				<span class="label">Från</span>
+				<input type="date" bind:value={startDate} class="{input} min-w-0" />
+			</label>
+			<label class="block space-y-1.5">
+				<span class="label">Till</span>
+				<input type="date" bind:value={endDate} min={startDate || undefined} class="{input} min-w-0" />
+			</label>
+			{#if errors.start_date || errors.end_date}
+				<p class="col-span-2 text-sm text-red-600">{errors.start_date || errors.end_date}</p>
+			{/if}
+		</div>
+
+		<label class="block space-y-1.5">
+			<span class="label">Beskrivning</span>
+			<textarea
+				rows="4"
+				maxlength="5000"
+				bind:value={description}
+				placeholder="Vart ska ni, och varför?"
+				class={input}
+			></textarea>
+		</label>
+
+		<div class="space-y-1">
+			<span class="label">Omslagsbild</span>
+			{#if coverPreview || existingCover}
+				<div class="relative overflow-hidden rounded-2xl border border-line">
+					<img src={coverPreview || existingCover} alt="" class="aspect-video w-full object-cover" />
+					<button
+						type="button"
+						onclick={removeCover}
+						class="absolute right-2 top-2 rounded-full bg-black/60 px-3 py-1 text-sm text-white"
+					>
+						Ta bort
+					</button>
+				</div>
+			{/if}
+			<label
+				class="flex cursor-pointer items-center justify-center rounded-2xl border border-dashed border-rust/30 bg-field px-3 py-4 text-sm font-medium text-rust transition hover:border-rust/60"
+			>
+				<input
+					type="file"
+					accept="image/jpeg,image/png,image/webp,image/heic"
+					onchange={pickCover}
+					class="sr-only"
+				/>
+				{coverPreview || existingCover ? 'Byt bild' : 'Lägg till omslagsbild?'}
+			</label>
+			{#if errors.cover}<span class="text-sm text-red-600">{errors.cover}</span>{/if}
+		</div>
+
+		{#if others.length > 0}
+			<fieldset>
+				<legend class="label mb-2">Deltagare</legend>
+				<p class="-mt-1 mb-2 text-sm text-muted">Deltagare ser resan och kan bidra med inlägg.</p>
+				<div class="flex flex-wrap gap-2">
+					{#each others as user (user.id)}
+						{@const selected = participants.includes(user.id)}
+						<button
+							type="button"
+							aria-pressed={selected}
+							onclick={() => toggleParticipant(user.id)}
+							class="chip py-1 pl-1"
+						>
+							<Avatar {user} size="h-7 w-7 text-[10px]" />
+							{user.name || user.email}
+							{#if selected}<span>✓</span>{/if}
+						</button>
+					{/each}
+				</div>
+			</fieldset>
+		{/if}
+
+	</div>
 
 	{#if errors.form}
 		<p class="text-sm text-red-600" role="alert">{errors.form}</p>
 	{/if}
 
 	<div class="flex gap-3">
-		<button
-			type="submit"
-			disabled={busy}
-			class="flex-1 rounded-xl bg-accent py-2.5 font-medium text-paper disabled:opacity-60"
-		>
+		<button type="submit" disabled={busy} class="btn-primary flex-1">
 			{busy ? 'Sparar…' : initial ? 'Spara' : 'Skapa resa'}
 		</button>
-		<button
-			type="button"
-			onclick={oncancel}
-			class="rounded-xl border border-line px-5 py-2.5 hover:bg-accent-soft"
-		>
-			Avbryt
-		</button>
+		<button type="button" onclick={oncancel} class="btn-ghost">Avbryt</button>
 	</div>
 </form>

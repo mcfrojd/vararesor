@@ -38,6 +38,7 @@ Klart:
 - Dagar och inlägg (`posts`) med mallar: övernattning, mat och dryck, sevärdhet, anteckning. Dagarna räknas fram ur resans datum.
 - Karta (MapLibre + OpenFreeMap, ingen nyckel) på resa, inlägg och `/karta`, med Doris GPS-spår och filter för typ, spår och period.
 - Tid på inlägg, startsida med pågående/kommande/tidigare resor.
+- Utseende i stil med jorial.app: se klasserna i `web/src/app.css` (`card`, `field`, `label`, `chip`, `title`, `btn-*`) och komponenterna `Icon`, `Fab`, `BackLink`. Använd dem i stället för egna Tailwind-kombinationer.
 - Offline: appen och lästa data cachas av service workern; nya inlägg köas i Dexie (`src/lib/offline.svelte.ts`) och skickas när nätet är tillbaka.
 
 Nästa steg: bilder med webp-skalning och S3 (väntar tills användaren är vid datorn). Publicering till husbilendoris.se väntar också.

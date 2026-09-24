@@ -16,7 +16,7 @@
 
 <a
 	href="/trips/{trip.id}"
-	class="block overflow-hidden rounded-2xl border border-line bg-card transition hover:border-accent"
+	class="card block h-full overflow-hidden transition hover:-translate-y-0.5 hover:shadow-card"
 >
 	{#if trip.cover}
 		<img
@@ -31,12 +31,12 @@
 			{t.icon}
 		</div>
 	{/if}
-	<div class="p-3">
-		<p class="text-[11px] font-medium uppercase tracking-wide text-accent">{t.icon} {t.label}</p>
-		<h3 class="mt-0.5 font-semibold leading-snug">{trip.title}</h3>
+	<div class="p-3.5">
+		<p class="text-[10px] font-bold uppercase tracking-wider text-accent">{t.label}</p>
+		<h3 class="title mt-0.5 text-xl leading-tight">{trip.title}</h3>
 		<p class="text-xs text-muted">
 			{formatDateRange(trip.start_date, trip.end_date) || 'Inget datum än'}
-			{#if soon}<span class="text-accent"> · {soon}</span>{/if}
+			{#if soon}<span class="font-semibold text-rust"> · {soon}</span>{/if}
 		</p>
 	</div>
 </a>

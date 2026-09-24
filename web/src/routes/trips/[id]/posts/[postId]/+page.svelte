@@ -8,6 +8,8 @@
 	import Stars from '$lib/Stars.svelte';
 	import { mapPoints } from '$lib/posts';
 	import TripMap from '$lib/TripMap.svelte';
+	import BackLink from '$lib/BackLink.svelte';
+	import Icon from '$lib/Icon.svelte';
 
 	let { data } = $props();
 
@@ -47,39 +49,48 @@
 
 <svelte:head><title>{post.title || k.label} · {trip.title}</title></svelte:head>
 
-<a href="/trips/{trip.id}#dag-{post.day.slice(0, 10)}" class="mb-4 inline-block text-sm text-muted hover:text-ink">
-	← {trip.title}
-</a>
+<BackLink href="/trips/{trip.id}#dag-{post.day.slice(0, 10)}" label={trip.title} />
 
-<article class="space-y-4 rounded-2xl border border-line bg-card p-5">
-	<div class="flex items-start justify-between gap-3">
+<article class="card space-y-5 p-5 sm:p-6">
+	<div>
+		<div class="flex min-h-8 items-center justify-between gap-3">
+			<p class="text-sm font-semibold text-muted">
+				{n ? `Dag ${n} · ` : ''}{formatDay(post.day)}{post.time ? ` kl. ${post.time}` : ''}
+			</p>
+			{#if isAuthor}
+				<a href="/trips/{trip.id}/posts/{post.id}/edit" class="btn-small shrink-0">
+					<Icon name="pencil" class="h-3.5 w-3.5" />Redigera
+				</a>
+			{/if}
+		</div>
 		<div>
-			<p class="text-xs font-medium uppercase tracking-wide text-accent">
+			<h1 class="title mt-1 text-4xl leading-tight">{post.title || k.label}</h1>
+			<p class="mt-1 font-semibold text-rust">
 				{k.icon}
 				{[k.label, post.category].filter(Boolean).join(' · ')}
 			</p>
-			<h1 class="mt-1 text-2xl font-semibold tracking-tight">{post.title || k.label}</h1>
-			<p class="text-sm text-muted">
-				{n ? `Dag ${n} · ` : ''}{formatDay(post.day)}{post.time ? ` · ${post.time}` : ''}
-			</p>
+			{#if hasLocation(post.location)}
+				<a
+					href={mapUrl(post.location)}
+					target="_blank"
+					rel="noopener"
+					class="mt-0.5 inline-flex items-center gap-1 text-xs text-rust/70 hover:underline"
+				>
+					<Icon name="pin" class="h-3 w-3" />{formatLocation(post.location)}
+				</a>
+			{/if}
 		</div>
-		{#if isAuthor}
-			<a
-				href="/trips/{trip.id}/posts/{post.id}/edit"
-				class="shrink-0 rounded-full border border-line px-3 py-1 text-sm hover:bg-accent-soft"
-			>
-				Redigera
-			</a>
-		{/if}
 	</div>
 
-	{#if post.rating}<p class="text-xl"><Stars value={post.rating} /></p>{/if}
+	{#if post.body}<p class="whitespace-pre-line text-[17px] leading-relaxed">{post.body}</p>{/if}
 
 	{#if facts.length > 0}
-		<dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+		<dl class="divide-y divide-line rounded-2xl bg-field px-4">
 			{#each facts as [label, value] (label)}
-				<dt class="text-muted">{label}</dt>
-				<dd>{value}</dd>
+				<div class="flex items-baseline justify-between gap-4 py-2.5 text-sm">
+					<dt class="text-muted">{label}</dt>
+					<dd class="text-right font-medium text-ink">{value}</dd>
+				</div>
 			{/each}
 		</dl>
 	{/if}
@@ -87,36 +98,32 @@
 	{#if d.facilities?.length}
 		<ul class="flex flex-wrap gap-2">
 			{#each d.facilities as f (f)}
-				<li class="rounded-full bg-accent-soft px-3 py-1 text-sm text-accent">{f}</li>
+				<li class="rounded-full bg-rust-soft px-3 py-1 text-xs font-semibold text-rust">{f}</li>
 			{/each}
 		</ul>
 	{/if}
 
-	{#if post.body}<p class="whitespace-pre-line">{post.body}</p>{/if}
+	{#if post.rating}<p class="text-2xl"><Stars value={post.rating} /></p>{/if}
 
 	{#if hasLocation(post.location)}
-		<TripMap points={mapPoints([post], trip.start_date)} class="h-52" />
-		<a
-			href={mapUrl(post.location)}
-			target="_blank"
-			rel="noopener"
-			class="inline-block text-sm text-accent hover:underline"
-		>
-			📍 {formatLocation(post.location)} · Visa på karta
-		</a>
+		<TripMap points={mapPoints([post], trip.start_date)} class="h-56" />
 	{/if}
 
 	{#if post.expand?.author}
 		<p class="flex items-center gap-2 border-t border-line pt-4 text-sm text-muted">
-			<Avatar user={post.expand.author} size="h-6 w-6 text-[9px]" />
+			<Avatar user={post.expand.author} size="h-7 w-7 text-[10px]" />
 			{post.expand.author.name || post.expand.author.email}
 		</p>
 	{/if}
 </article>
 
 {#if canDelete}
-	<button type="button" onclick={remove} class="mt-6 text-sm text-red-600 hover:underline">
-		Ta bort inlägget
+	<button
+		type="button"
+		onclick={remove}
+		class="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-red-600 hover:underline"
+	>
+		<Icon name="trash" class="h-4 w-4" />Ta bort inlägget
 	</button>
 	{#if error}<p class="mt-2 text-sm text-red-600">{error}</p>{/if}
 {/if}

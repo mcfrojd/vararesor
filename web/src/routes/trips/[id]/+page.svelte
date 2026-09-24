@@ -10,6 +10,9 @@
 	import { hasLocation, mapPoints, sortPosts } from '$lib/posts';
 	import { loadDorisTracks, type Line } from '$lib/tracks';
 	import TripMap from '$lib/TripMap.svelte';
+	import BackLink from '$lib/BackLink.svelte';
+	import Fab from '$lib/Fab.svelte';
+	import Icon from '$lib/Icon.svelte';
 
 	let { data } = $props();
 
@@ -83,40 +86,34 @@
 
 <svelte:head><title>{trip.title} · Våra resor</title></svelte:head>
 
-<a href="/" class="mb-4 inline-block text-sm text-muted hover:text-ink">← Alla resor</a>
+<BackLink href="/" label="Alla resor" />
 
-<article class="overflow-hidden rounded-2xl border border-line bg-card">
+<article class="card overflow-hidden">
 	{#if trip.cover}
 		<img src={pb.files.getURL(trip, trip.cover)} alt="" class="aspect-video w-full object-cover" />
 	{/if}
-	<div class="space-y-4 p-5">
-		<div class="flex items-start justify-between gap-3">
-			<div>
-				<p class="text-xs font-medium uppercase tracking-wide text-accent">
-					{tripTypes[trip.type].icon}
-					{tripTypes[trip.type].label}
-				</p>
-				<h1 class="mt-1 text-2xl font-semibold tracking-tight">{trip.title}</h1>
-				<p class="text-sm text-muted">{formatDateRange(trip.start_date, trip.end_date)}</p>
+	<div class="space-y-4 p-5 sm:p-6">
+		<div>
+			<div class="flex min-h-8 items-center justify-between gap-3">
+				<p class="eyebrow">{tripTypes[trip.type].icon} {tripTypes[trip.type].label}</p>
+				{#if isOwner}
+					<a href="/trips/{trip.id}/edit" class="btn-small shrink-0">
+						<Icon name="pencil" class="h-3.5 w-3.5" />Redigera
+					</a>
+				{/if}
 			</div>
-			{#if isOwner}
-				<a
-					href="/trips/{trip.id}/edit"
-					class="shrink-0 rounded-full border border-line px-3 py-1 text-sm hover:bg-accent-soft"
-				>
-					Redigera
-				</a>
-			{/if}
+			<h1 class="title mt-1 text-4xl leading-tight">{trip.title}</h1>
+			<p class="mt-1 text-sm text-muted">{formatDateRange(trip.start_date, trip.end_date)}</p>
 		</div>
 
 		{#if trip.description}
-			<p class="whitespace-pre-line">{trip.description}</p>
+			<p class="whitespace-pre-line leading-relaxed">{trip.description}</p>
 		{/if}
 
 		{#if people.length > 0}
 			<ul class="flex flex-wrap gap-2">
 				{#each people as person (person.id)}
-					<li class="flex items-center gap-2 rounded-full bg-paper py-1 pl-1 pr-3 text-sm">
+					<li class="flex items-center gap-2 rounded-full bg-field py-1 pl-1 pr-3 text-sm text-ink">
 						<Avatar user={person} size="h-7 w-7 text-[10px]" />
 						{person.name || person.email}
 						{#if person.id === trip.owner}<span class="text-muted">· ägare</span>{/if}
@@ -128,8 +125,8 @@
 </article>
 
 {#if located.length > 0 || hasTracks}
-	<section class="mt-8">
-		<h2 class="mb-3 text-xl font-semibold tracking-tight">Karta</h2>
+	<section class="mt-10">
+		<h2 class="title mb-3 text-3xl">Karta</h2>
 		<div class="mb-3">
 			<MapFilter bind:filter {counts} tracksAvailable={hasTracks} />
 		</div>
@@ -144,41 +141,38 @@
 	</section>
 {/if}
 
-<section class="mt-8">
-	<div class="mb-3 flex items-center justify-between">
-		<h2 class="text-xl font-semibold tracking-tight">Dagar</h2>
-		<a
-			href="/trips/{trip.id}/posts/new"
-			class="rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-paper"
-		>
-			+ Nytt inlägg
-		</a>
-	</div>
+<section class="mt-10">
+	<h2 class="title mb-4 text-3xl">Dagar</h2>
 
 	{#if days.length === 0}
-		<div class="rounded-2xl border border-dashed border-line p-8 text-center text-sm text-muted">
-			Inga inlägg än. Lägg till ett, eller sätt datum på resan så visas dagarna här.
+		<div class="card px-6 py-10 text-center text-muted">
+			Inga inlägg än. Tryck på plusknappen, eller sätt datum på resan så visas dagarna här.
 		</div>
 	{:else}
-		<ol class="space-y-6">
+		<ol class="space-y-8">
 			{#each days as day (day)}
 				{@const n = dayNumber(trip.start_date, day)}
 				{@const posts = postsByDay[day] ?? []}
-				<li id="dag-{day}" class="scroll-mt-20">
-					<div class="mb-2 flex items-baseline justify-between gap-3">
-						<h3 class="font-semibold">
-							{n ? `Dag ${n}` : 'Före resan'}
-							<span class="font-normal text-muted">· {formatDay(day)}</span>
+				<li id="dag-{day}" class="scroll-mt-24">
+					<div class="mb-3 flex items-baseline justify-between gap-3">
+						<h3 class="flex flex-wrap items-baseline gap-x-2">
+							<span class="title text-2xl">{n ? `Dag ${n}` : 'Före resan'}</span>
+							<span class="text-sm text-muted">{formatDay(day)}</span>
 							{#if day === todayDay}
-								<span class="ml-1 rounded-full bg-accent-soft px-2 py-0.5 text-xs text-accent">i dag</span>
+								<span class="rounded-full bg-rust-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rust">
+									I dag
+								</span>
 							{/if}
 						</h3>
-						<a href="/trips/{trip.id}/posts/new?day={day}" class="text-sm text-accent hover:underline">
-							+ Lägg till
+						<a
+							href="/trips/{trip.id}/posts/new?day={day}"
+							class="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-rust hover:underline"
+						>
+							<Icon name="plus" class="h-4 w-4" />Lägg till
 						</a>
 					</div>
 					{#if posts.length > 0}
-						<ul class="space-y-2">
+						<ul class="space-y-3">
 							{#each posts as post (post.id)}
 								{@const q = queuedById[post.id]}
 								<li>
@@ -191,10 +185,14 @@
 							{/each}
 						</ul>
 					{:else}
-						<p class="border-l-2 border-line pl-3 text-sm text-muted">Inget än.</p>
+						<p class="rounded-2xl border border-dashed border-line px-4 py-3 text-sm text-muted">
+							Inget än.
+						</p>
 					{/if}
 				</li>
 			{/each}
 		</ol>
 	{/if}
 </section>
+
+<Fab href="/trips/{trip.id}/posts/new" label="Nytt inlägg" />

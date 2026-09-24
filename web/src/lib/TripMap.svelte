@@ -75,7 +75,7 @@
 		const el = document.createElement('button');
 		el.type = 'button';
 		el.className =
-			'flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-card text-lg shadow-md';
+			'flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-card text-lg shadow-md transition hover:scale-110';
 		el.textContent = postKinds[p.kind].icon;
 		el.setAttribute('aria-label', p.title);
 		return el;
@@ -171,7 +171,7 @@
 	});
 </script>
 
-<div bind:this={container} class="{className} w-full overflow-hidden rounded-2xl border border-line bg-card"></div>
+<div bind:this={container} class="{className} w-full overflow-hidden rounded-3xl border border-line bg-card shadow-soft"></div>
 
 <style>
 	/* Popupen följer appens färger i både ljust och mörkt läge. */

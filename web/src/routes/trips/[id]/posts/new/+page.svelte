@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BackLink from '$lib/BackLink.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { defaultDay } from '$lib/format';
@@ -17,10 +18,8 @@
 
 <svelte:head><title>Nytt inlägg · {trip.title}</title></svelte:head>
 
-<a href="/trips/{trip.id}" class="mb-4 inline-block text-sm text-muted hover:text-ink">
-	← {trip.title}
-</a>
-<h1 class="mb-5 text-2xl font-semibold tracking-tight">Nytt inlägg</h1>
+<BackLink href="/trips/{trip.id}" label={trip.title} />
+<h1 class="title mb-6 text-4xl">Nytt inlägg</h1>
 
 <PostForm
 	tripId={trip.id}

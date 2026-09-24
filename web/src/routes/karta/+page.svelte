@@ -61,13 +61,12 @@
 
 <svelte:head><title>Karta · Våra resor</title></svelte:head>
 
-<h1 class="mb-4 text-2xl font-semibold tracking-tight">Där vi varit</h1>
+<h1 class="title mb-5 text-4xl">Där vi varit</h1>
 
 {#if data.posts.length === 0 && data.husbilTrips.length === 0}
-	<div class="rounded-2xl border border-dashed border-line p-10 text-center">
-		<p class="text-4xl">🗺️</p>
-		<p class="mt-2 font-medium">Inga platser än</p>
-		<p class="text-sm text-muted">Inlägg med position hamnar här.</p>
+	<div class="card px-6 py-12 text-center">
+		<p class="title text-2xl">Inga platser än</p>
+		<p class="mt-1 text-muted">Inlägg med position hamnar här.</p>
 	</div>
 {:else}
 	<div class="mb-4">

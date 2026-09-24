@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { dayNumber, formatDateRange, today, tripStatus, tripTypes, type TripStatus } from '$lib/format';
 	import { pb, type Trip } from '$lib/pb';
+	import Fab from '$lib/Fab.svelte';
+	import Icon from '$lib/Icon.svelte';
 	import TripCard from '$lib/TripCard.svelte';
 
 	let trips = $state<Trip[]>([]);
@@ -28,13 +30,18 @@
 		const total = trip.end_date ? dayNumber(trip.start_date, trip.end_date) : 0;
 		return total ? `Dag ${n} av ${total}` : `Dag ${n}`;
 	}
+
+	// Plusknappen: nytt inlägg på den pågående resan, annars en ny resa.
+	const fab = $derived(
+		groups.ongoing.length === 1
+			? { href: `/trips/${groups.ongoing[0].id}/posts/new`, label: 'Nytt inlägg' }
+			: { href: '/trips/new', label: 'Ny resa' }
+	);
 </script>
 
-<div class="mb-4 flex items-center justify-between">
-	<h1 class="text-2xl font-semibold tracking-tight">Resor</h1>
-	<a href="/trips/new" class="rounded-full border border-line px-4 py-1.5 text-sm font-medium hover:bg-accent-soft">
-		+ Ny resa
-	</a>
+<div class="mb-6 flex items-end justify-between gap-3">
+	<h1 class="title text-4xl">Resor</h1>
+	<a href="/trips/new" class="btn-small"><Icon name="plus" class="h-4 w-4" />Ny resa</a>
 </div>
 
 {#if loading}
@@ -42,20 +49,17 @@
 {:else if error}
 	<p class="text-red-600">{error}</p>
 {:else if trips.length === 0}
-	<div class="rounded-2xl border border-dashed border-line p-10 text-center">
-		<p class="text-4xl">🗺️</p>
-		<p class="mt-2 font-medium">Inga resor än</p>
-		<p class="text-sm text-muted">Här hamnar era resor när ni lagt till dem.</p>
-		<a href="/trips/new" class="mt-4 inline-block text-sm font-medium text-accent hover:underline">
-			Skapa den första
-		</a>
+	<div class="card px-6 py-12 text-center">
+		<p class="title text-2xl">Inga resor än</p>
+		<p class="mt-1 text-muted">Här hamnar era resor när ni lagt till dem.</p>
+		<a href="/trips/new" class="btn-primary mt-6">Skapa den första</a>
 	</div>
 {:else}
 	{#if groups.ongoing.length > 0}
-		<section class="mb-8 space-y-4">
-			<h2 class="text-sm font-medium uppercase tracking-wide text-muted">Pågår nu</h2>
+		<section class="mb-10 space-y-4">
+			<h2 class="label">Pågår nu</h2>
 			{#each groups.ongoing as trip (trip.id)}
-				<article class="overflow-hidden rounded-2xl border border-line bg-card">
+				<article class="card overflow-hidden">
 					<a href="/trips/{trip.id}" class="block">
 						{#if trip.cover}
 							<img
@@ -71,17 +75,14 @@
 							</div>
 						{/if}
 					</a>
-					<div class="flex items-end justify-between gap-3 p-4">
+					<div class="flex items-end justify-between gap-3 p-5">
 						<a href="/trips/{trip.id}" class="min-w-0">
-							<p class="text-xs font-medium uppercase tracking-wide text-accent">{dayLabel(trip)}</p>
-							<h3 class="truncate text-xl font-semibold tracking-tight">{trip.title}</h3>
-							<p class="text-sm text-muted">{formatDateRange(trip.start_date, trip.end_date)}</p>
+							<p class="eyebrow">{dayLabel(trip)}</p>
+							<h3 class="title mt-1 line-clamp-2 text-2xl leading-tight sm:text-3xl">{trip.title}</h3>
+							<p class="mt-0.5 text-sm text-muted">{formatDateRange(trip.start_date, trip.end_date)}</p>
 						</a>
-						<a
-							href="/trips/{trip.id}/posts/new"
-							class="shrink-0 rounded-full bg-accent px-4 py-2 text-sm font-medium text-paper"
-						>
-							+ Inlägg
+						<a href="/trips/{trip.id}/posts/new" class="btn-primary shrink-0 px-4 py-2.5 text-sm">
+							<Icon name="plus" class="h-4 w-4" />Inlägg
 						</a>
 					</div>
 				</article>
@@ -91,8 +92,8 @@
 
 	{#each [{ key: 'upcoming', label: 'Kommande' }, { key: 'past', label: 'Tidigare' }] as const as section (section.key)}
 		{#if groups[section.key].length > 0}
-			<section class="mb-8">
-				<h2 class="mb-3 text-sm font-medium uppercase tracking-wide text-muted">{section.label}</h2>
+			<section class="mb-10">
+				<h2 class="label mb-3">{section.label}</h2>
 				<ul class="grid grid-cols-2 gap-3 sm:grid-cols-3">
 					{#each groups[section.key] as trip (trip.id)}
 						<li><TripCard {trip} /></li>
@@ -102,3 +103,5 @@
 		{/if}
 	{/each}
 {/if}
+
+<Fab href={fab.href} label={fab.label} />

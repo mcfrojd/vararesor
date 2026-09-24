@@ -97,10 +97,12 @@ export async function sync() {
 			}
 		}
 	} finally {
+		// Hämta om sidorna först, så att de skickade inläggen finns i datan innan
+		// de försvinner ur kön. Annars blinkar de bort en stund.
+		if (sent > 0) await invalidateAll().catch(() => {});
 		offline.syncing = false;
 		await refresh();
 	}
-	if (sent > 0) await invalidateAll();
 }
 
 let started = false;

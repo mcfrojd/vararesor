@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BackLink from '$lib/BackLink.svelte';
 	import { goto } from '$app/navigation';
 	import { auth } from '$lib/auth.svelte';
 	import PostForm from '$lib/PostForm.svelte';
@@ -11,10 +12,8 @@
 
 <svelte:head><title>Redigera inlägg · {trip.title}</title></svelte:head>
 
-<a href="/trips/{trip.id}/posts/{post.id}" class="mb-4 inline-block text-sm text-muted hover:text-ink">
-	← Tillbaka
-</a>
-<h1 class="mb-5 text-2xl font-semibold tracking-tight">Redigera inlägg</h1>
+<BackLink href="/trips/{trip.id}/posts/{post.id}" label="Tillbaka" />
+<h1 class="title mb-6 text-4xl">Redigera inlägg</h1>
 
 {#if post.author !== auth.user?.id}
 	<p class="text-muted">Bara den som skrivit inlägget kan ändra det.</p>

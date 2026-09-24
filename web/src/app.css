@@ -1,42 +1,119 @@
 @import 'tailwindcss';
+/* Typsnitt som i Jorial: Newsreader (serif) för rubriker, Plus Jakarta Sans för
+   resten. Paketeras med appen (inte Google Fonts) så att de fungerar offline. */
+@import '@fontsource-variable/newsreader/wght.css';
+@import '@fontsource-variable/plus-jakarta-sans/wght.css';
 
+/* Färger och former inspirerade av jorial.app: varm krämig bakgrund, vita kort
+   med mjuk skugga, salviagrönt och terrakotta som accenter. */
 @theme {
-	--color-paper: #faf8f5;
-	--color-ink: #1f2522;
-	--color-muted: #6b7470;
-	--color-line: #e6e1d9;
+	--color-paper: #f6f0e6;
 	--color-card: #ffffff;
-	--color-accent: #2f5d50;
-	--color-accent-soft: #e3ece8;
-	--font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	--color-field: #fbf6ee;
+	--color-ink: #19241e;
+	--color-body: #47564d;
+	--color-muted: #78897f;
+	--color-line: rgb(25 36 30 / 0.09);
+	--color-accent: #2b5941;
+	--color-accent-hover: #224734;
+	--color-accent-soft: #e4ebe5;
+	--color-rust: #a4573a;
+	--color-rust-soft: #f6e3d7;
+	--color-amber: #c4994d;
+	--font-sans: 'Plus Jakarta Sans Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	--font-serif: 'Newsreader Variable', Georgia, serif;
+	--shadow-soft: 0 10px 30px -8px rgb(25 36 30 / 0.08);
+	--shadow-card: 0 20px 48px -12px rgb(25 36 30 / 0.12);
+	--radius-4xl: 2rem;
 }
 
 @media (prefers-color-scheme: dark) {
 	:root {
-		--color-paper: #141816;
-		--color-ink: #ecefed;
-		--color-muted: #9aa39f;
-		--color-line: #2a302d;
-		--color-card: #1c211f;
-		--color-accent: #8cc2ae;
-		--color-accent-soft: #23302b;
+		--color-paper: #111512;
+		--color-card: #1a201c;
+		--color-field: #202823;
+		--color-ink: #eef1ec;
+		--color-body: #c9d1cb;
+		--color-muted: #8e9a93;
+		--color-line: rgb(255 255 255 / 0.09);
+		--color-accent: #8fc4a8;
+		--color-accent-hover: #a7d3bb;
+		--color-accent-soft: #1f2e26;
+		--color-rust: #e3a07f;
+		--color-rust-soft: #3a271e;
+		--color-amber: #d9b36e;
+		--shadow-soft: 0 10px 30px -8px rgb(0 0 0 / 0.5);
+		--shadow-card: 0 20px 48px -12px rgb(0 0 0 / 0.6);
 	}
 }
 
 html {
 	color-scheme: light dark;
+	-webkit-tap-highlight-color: transparent;
 }
 
 body {
-	@apply bg-paper text-ink font-sans antialiased;
+	@apply bg-paper font-sans text-body antialiased;
+}
+
+h1,
+h2,
+h3 {
+	@apply text-ink;
+}
+
+/* Stor rubrik i serif, som jorial.app. */
+@utility title {
+	@apply font-serif font-medium tracking-tight text-ink;
+}
+
+/* Vitt kort med rundade hörn och mjuk skugga. */
+@utility card {
+	@apply rounded-3xl border border-line bg-card shadow-soft;
+}
+
+/* Liten grå etikett ovanför fält: "POSITION", "BETYG" … */
+@utility label {
+	@apply block text-[11px] font-semibold uppercase tracking-wider text-muted;
+}
+
+/* Liten grön överrubrik: "HUSBIL", "DAG 2 AV 3" … */
+@utility eyebrow {
+	@apply text-xs font-bold uppercase tracking-wider text-accent;
+}
+
+/* Inmatningsfält: krämfyllt med terrakotta platshållartext. */
+@utility field {
+	@apply w-full rounded-2xl border border-line bg-field px-4 py-3 text-ink outline-none transition placeholder:text-rust/60 focus:border-rust/50 focus:ring-2 focus:ring-rust/10;
+}
+
+@utility btn-primary {
+	@apply inline-flex items-center justify-center gap-2 rounded-full bg-accent px-5 py-3 font-semibold text-paper transition hover:bg-accent-hover disabled:opacity-60;
+}
+
+@utility btn-ghost {
+	@apply inline-flex items-center justify-center gap-2 rounded-full border border-line bg-card px-5 py-3 font-medium text-ink transition hover:border-rust/30;
+}
+
+/* Litet runt knappläge i sidhuvuden: "Redigera" m.m. */
+@utility btn-small {
+	@apply inline-flex items-center gap-1.5 rounded-full border border-line bg-card px-3.5 py-1.5 text-sm font-medium text-ink transition hover:border-rust/30;
+}
+
+/* Valbar pastill. Aktiv = persika med terrakotta text, som aktiv flik i Jorial. */
+@utility chip {
+	@apply inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-card px-3.5 py-1.5 text-sm text-body transition;
+	&[aria-pressed='true'] {
+		@apply border-transparent bg-rust-soft font-semibold text-rust;
+	}
 }
 
 /* Omslag för resor utan bild: färg efter resetyp. */
 .cover-husbil {
-	background: linear-gradient(135deg, #2f5d50, #6f9a86);
+	background: linear-gradient(135deg, #2b5941, #6f9a86);
 }
 .cover-semester {
-	background: linear-gradient(135deg, #b5793a, #e3b56f);
+	background: linear-gradient(135deg, #a4573a, #d9a26d);
 }
 .cover-egen {
 	background: linear-gradient(135deg, #3d5a80, #7fa3c8);

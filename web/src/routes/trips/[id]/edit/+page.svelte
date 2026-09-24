@@ -1,4 +1,6 @@
 <script lang="ts">
+	import BackLink from '$lib/BackLink.svelte';
+	import Icon from '$lib/Icon.svelte';
 	import { goto } from '$app/navigation';
 	import { auth } from '$lib/auth.svelte';
 	import { pb } from '$lib/pb';
@@ -26,7 +28,8 @@
 
 <svelte:head><title>Redigera {trip.title} · Våra resor</title></svelte:head>
 
-<h1 class="mb-5 text-2xl font-semibold tracking-tight">Redigera resa</h1>
+<BackLink href="/trips/{trip.id}" label={trip.title} />
+<h1 class="title mb-6 text-4xl">Redigera resa</h1>
 
 {#if trip.owner !== auth.user?.id}
 	<p class="text-muted">Bara den som skapat resan kan ändra den.</p>
@@ -44,9 +47,9 @@
 			type="button"
 			onclick={remove}
 			disabled={deleting}
-			class="text-sm text-red-600 hover:underline disabled:opacity-60"
+			class="inline-flex items-center gap-1.5 text-sm font-medium text-red-600 hover:underline disabled:opacity-60"
 		>
-			{deleting ? 'Tar bort…' : 'Ta bort resan'}
+			<Icon name="trash" class="h-4 w-4" />{deleting ? 'Tar bort…' : 'Ta bort resan'}
 		</button>
 		{#if error}<p class="mt-2 text-sm text-red-600">{error}</p>{/if}
 	</div>

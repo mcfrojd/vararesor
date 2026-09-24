@@ -22,46 +22,38 @@
 	}
 </script>
 
-<div class="flex min-h-dvh items-center justify-center px-4">
-	<form onsubmit={submit} class="w-full max-w-sm space-y-5">
-		<div class="text-center">
-			<img src="/favicon.svg" alt="" class="mx-auto mb-3 h-14 w-14" />
-			<h1 class="text-2xl font-semibold tracking-tight">Våra resor</h1>
-			<p class="text-sm text-muted">Logga in för att fortsätta</p>
+<div class="flex min-h-dvh items-center justify-center px-4 py-10">
+	<div class="w-full max-w-sm">
+		<div class="mb-8 text-center">
+			<img src="/favicon.svg" alt="" class="mx-auto mb-5 h-16 w-16 rounded-2xl shadow-soft" />
+			<h1 class="title text-5xl">Våra resor</h1>
+			<p class="mt-2 text-body">Familjens resedagbok.</p>
 		</div>
 
-		<label class="block space-y-1">
-			<span class="text-sm font-medium">E-post</span>
-			<input
-				type="email"
-				autocomplete="username"
-				required
-				bind:value={email}
-				class="w-full rounded-xl border border-line bg-card px-3 py-2.5 outline-none focus:border-accent"
-			/>
-		</label>
+		<form onsubmit={submit} class="card space-y-5 p-6">
+			<label class="block space-y-1.5">
+				<span class="label">E-post</span>
+				<input type="email" autocomplete="username" required bind:value={email} class="field" />
+			</label>
 
-		<label class="block space-y-1">
-			<span class="text-sm font-medium">Lösenord</span>
-			<input
-				type="password"
-				autocomplete="current-password"
-				required
-				bind:value={password}
-				class="w-full rounded-xl border border-line bg-card px-3 py-2.5 outline-none focus:border-accent"
-			/>
-		</label>
+			<label class="block space-y-1.5">
+				<span class="label">Lösenord</span>
+				<input
+					type="password"
+					autocomplete="current-password"
+					required
+					bind:value={password}
+					class="field"
+				/>
+			</label>
 
-		{#if error}
-			<p class="text-sm text-red-600" role="alert">{error}</p>
-		{/if}
+			{#if error}
+				<p class="text-sm text-red-600" role="alert">{error}</p>
+			{/if}
 
-		<button
-			type="submit"
-			disabled={busy}
-			class="w-full rounded-xl bg-accent py-2.5 font-medium text-paper disabled:opacity-60"
-		>
-			{busy ? 'Loggar in…' : 'Logga in'}
-		</button>
-	</form>
+			<button type="submit" disabled={busy} class="btn-primary w-full">
+				{busy ? 'Loggar in…' : 'Logga in'}
+			</button>
+		</form>
+	</div>
 </div>

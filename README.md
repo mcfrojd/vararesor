@@ -161,7 +161,7 @@ Därefter kommer dagens text, Instagram-rutan, galleriet och GPS-spåret:
 |-----|-----|
 | Databas, inloggning, API | [PocketBase](https://pocketbase.io/) |
 | Gränssnitt | [SvelteKit](https://svelte.dev/docs/kit) (Svelte 5, TypeScript) byggd som statisk app (SPA) |
-| Utseende | [Tailwind CSS](https://tailwindcss.com/), ljust och mörkt tema efter enhetens inställning |
+| Utseende | [Tailwind CSS](https://tailwindcss.com/), ljust och mörkt tema efter enhetens inställning. Stil efter [jorial.app](https://jorial.app/): krämig bakgrund, vita kort, Newsreader (serif) i rubriker och Plus Jakarta Sans i text (paketerade med appen), salviagrönt och terrakotta, flikrad längst ner och rund plusknapp. Gemensamma klasser (`card`, `field`, `label`, `chip`, `btn-primary` …) i `web/src/app.css`. |
 | PWA | [@vite-pwa/sveltekit](https://vite-pwa-org.netlify.app/frameworks/sveltekit): manifest och service worker |
 | Offline | Service workern cachar appen, API-svar (nätet först) och bilder. Nya inlägg utan täckning köas i [Dexie](https://dexie.org/) (IndexedDB) och skickas när nätet är tillbaka. |
 | Karta | [MapLibre GL](https://maplibre.org/) med gratis kartor från [OpenFreeMap](https://openfreemap.org/) (OpenStreetMap-data, ingen API-nyckel). Husbilsresor visar Doris körda spår. |
@@ -184,7 +184,7 @@ vararesor/
 └── web/                     SvelteKit-appen
     └── src/
         ├── lib/             PocketBase-klient, inloggning, hjälpfunktioner
-        └── routes/          sidor: / (resor), /login, /trips/new,
+        └── routes/          sidor: / (resor), /login, /profil, /trips/new,
                              /trips/[id] (resa + dagar), /trips/[id]/edit,
                              /trips/[id]/posts/new, /trips/[id]/posts/[postId](/edit),
                              /karta (alla platser)

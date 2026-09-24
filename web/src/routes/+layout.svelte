@@ -2,15 +2,18 @@
 	import '../app.css';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { auth, logout } from '$lib/auth.svelte';
-	import { clearOfflineData, offline, startSync } from '$lib/offline.svelte';
+	import { auth } from '$lib/auth.svelte';
+	import Avatar from '$lib/Avatar.svelte';
+	import Icon, { type IconName } from '$lib/Icon.svelte';
+	import { offline, startSync } from '$lib/offline.svelte';
 	import { registerSW } from 'virtual:pwa-register';
 
 	let { children } = $props();
 
-	const isLogin = $derived(page.url.pathname === '/login');
+	const path = $derived(page.url.pathname);
+	const isLogin = $derived(path === '/login');
 
-	// Service worker: cachar app-skalet så att appen startar även utan nät.
+	// Service worker: cachar appen så att den startar även utan nät.
 	$effect(() => {
 		registerSW({ immediate: true });
 	});
@@ -22,49 +25,50 @@
 
 	const waiting = $derived(offline.queue.length);
 
-	async function signOut() {
-		if (
-			waiting > 0 &&
-			!confirm(`${waiting} inlägg har inte skickats än och försvinner om du loggar ut. Logga ut ändå?`)
-		)
-			return;
-		await clearOfflineData();
-		logout();
-	}
-
 	$effect(() => {
 		if (!auth.user && !isLogin) goto('/login', { replaceState: true });
 		if (auth.user && isLogin) goto('/', { replaceState: true });
 	});
+
+	// Flikraden längst ner, som i Jorial.
+	const tabs: { href: string; label: string; icon: IconName; match: (p: string) => boolean }[] = [
+		{ href: '/', label: 'Resor', icon: 'journal', match: (p) => p === '/' || p.startsWith('/trips') },
+		{ href: '/karta', label: 'Karta', icon: 'map', match: (p) => p.startsWith('/karta') },
+		{ href: '/profil', label: 'Profil', icon: 'user', match: (p) => p.startsWith('/profil') }
+	];
 </script>
 
 {#if auth.user && !isLogin}
-	<header class="sticky top-0 z-10 border-b border-line bg-paper/90 backdrop-blur">
-		<div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-			<a href="/" class="text-lg font-semibold tracking-tight">Våra resor</a>
-			<div class="flex items-center gap-3 text-sm">
-				<a href="/karta" class="text-muted hover:text-ink">🗺️ Karta</a>
-				<span class="text-muted">{auth.user.name || auth.user.email}</span>
-				<button
-					class="rounded-full border border-line px-3 py-1 hover:bg-accent-soft"
-					onclick={signOut}
-				>
-					Logga ut
-				</button>
-			</div>
+	<header
+		class="sticky top-0 z-30 px-3 pb-2"
+		style="padding-top: max(0.75rem, env(safe-area-inset-top))"
+	>
+		<div
+			class="mx-auto flex max-w-3xl items-center justify-between rounded-full border border-line bg-card/85 py-1.5 pl-2 pr-1.5 shadow-soft backdrop-blur-md"
+		>
+			<a href="/" class="flex items-center gap-2">
+				<img src="/favicon.svg" alt="" class="h-8 w-8 rounded-xl" />
+				<span class="font-serif text-xl font-medium tracking-tight text-ink">Våra resor</span>
+			</a>
+			<a href="/profil" aria-label="Profil" class="rounded-full">
+				<Avatar user={auth.user} size="h-8 w-8 text-[10px]" />
+			</a>
 		</div>
 		{#if !offline.online || waiting > 0}
 			<div
 				role="status"
-				class="border-t border-line px-4 py-1.5 text-center text-sm {offline.online
+				class="mx-auto mt-2 flex max-w-3xl items-center justify-center gap-2 rounded-full px-4 py-1.5 text-center text-sm font-medium {offline.online
 					? 'bg-accent-soft text-accent'
-					: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200'}"
+					: 'bg-rust-soft text-rust'}"
 			>
 				{#if !offline.online}
-					Ingen uppkoppling.
-					{waiting > 0
-						? `${waiting} inlägg väntar och skickas när nätet är tillbaka.`
-						: 'Nya inlägg sparas på telefonen tills nätet är tillbaka.'}
+					<Icon name="cloudOff" class="h-4 w-4 shrink-0" />
+					<span>
+						Ingen uppkoppling.
+						{waiting > 0
+							? `${waiting} inlägg väntar och skickas när nätet är tillbaka.`
+							: 'Nya inlägg sparas på telefonen tills nätet är tillbaka.'}
+					</span>
 				{:else if offline.syncing}
 					Skickar {waiting} inlägg…
 				{:else}
@@ -73,9 +77,34 @@
 			</div>
 		{/if}
 	</header>
-	<main class="mx-auto max-w-3xl px-4 py-6">
+
+	<main class="mx-auto max-w-3xl px-4 pb-36 pt-3">
 		{@render children()}
 	</main>
+
+	<nav
+		aria-label="Huvudmeny"
+		class="fixed inset-x-0 bottom-0 z-30 px-3"
+		style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom))"
+	>
+		<div
+			class="mx-auto grid max-w-sm grid-cols-3 gap-1 rounded-3xl border border-line bg-card/90 p-1.5 shadow-card backdrop-blur-md"
+		>
+			{#each tabs as tab (tab.href)}
+				{@const active = tab.match(path)}
+				<a
+					href={tab.href}
+					aria-current={active ? 'page' : undefined}
+					class="flex flex-col items-center gap-0.5 rounded-2xl py-2 text-[10px] font-bold uppercase tracking-wider transition {active
+						? 'bg-rust-soft text-rust'
+						: 'text-muted hover:text-ink'}"
+				>
+					<Icon name={tab.icon} class="h-5 w-5" />
+					{tab.label}
+				</a>
+			{/each}
+		</div>
+	</nav>
 {:else if isLogin}
 	{@render children()}
 {/if}

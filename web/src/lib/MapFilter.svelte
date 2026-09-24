@@ -28,11 +28,7 @@
 			: [...filter.kinds, k];
 	}
 
-	const chip = (on: boolean) =>
-		`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm transition ${
-			on ? 'border-accent bg-accent-soft font-medium' : 'border-line bg-card text-muted'
-		}`;
-	const input = 'rounded-xl border border-line bg-card px-3 py-2 text-sm outline-none focus:border-accent';
+	const input = 'field py-2 text-sm';
 </script>
 
 <div class="space-y-3">
@@ -47,7 +43,7 @@
 				type="button"
 				aria-pressed={filter.kinds.includes(k)}
 				onclick={() => toggleKind(k)}
-				class={chip(filter.kinds.includes(k))}
+				class="chip"
 			>
 				{postKinds[k].icon}
 				{short[k]}
@@ -59,7 +55,7 @@
 				type="button"
 				aria-pressed={filter.tracks}
 				onclick={() => (filter.tracks = !filter.tracks)}
-				class={chip(filter.tracks)}
+				class="chip"
 			>
 				🛣️ Spår
 			</button>
@@ -72,8 +68,8 @@
 				type="button"
 				aria-pressed={filter.range === r.value}
 				onclick={() => (filter.range = r.value)}
-				class="rounded-full px-3 py-1 text-sm {filter.range === r.value
-					? 'bg-accent font-medium text-paper'
+				class="rounded-full px-3 py-1 text-sm font-medium transition {filter.range === r.value
+					? 'bg-ink text-paper'
 					: 'text-muted hover:text-ink'}"
 			>
 				{r.label}

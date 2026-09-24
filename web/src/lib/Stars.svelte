@@ -12,14 +12,14 @@
 				aria-checked={value === n}
 				aria-label="{n} av 5"
 				onclick={() => (value = value === n ? 0 : n)}
-				class="text-3xl leading-none {n <= value ? 'text-amber-500' : 'text-line'}"
+				class="text-3xl leading-none transition {n <= value ? 'text-ink' : 'text-muted/30'}"
 			>
 				★
 			</button>
 		{/each}
 	</div>
 {:else if value > 0}
-	<span class="text-amber-500" aria-label="Betyg {value} av 5">
-		{'★'.repeat(value)}<span class="text-line">{'★'.repeat(5 - value)}</span>
+	<span class="tracking-widest text-ink" aria-label="Betyg {value} av 5">
+		{'★'.repeat(value)}<span class="text-muted/40">{'☆'.repeat(5 - value)}</span>
 	</span>
 {/if}
