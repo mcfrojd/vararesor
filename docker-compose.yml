@@ -1,0 +1,12 @@
+services:
+  vararesor:
+    build: .
+    container_name: vararesor
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8090}:8090"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./pb_data:/pb/pb_data

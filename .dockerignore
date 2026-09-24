@@ -1,0 +1,6 @@
+.git
+.env
+pb_data
+web/node_modules
+web/.svelte-kit
+web/build

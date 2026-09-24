@@ -2,7 +2,7 @@
 
 En enkel och stilren resedagbok för familjen, byggd som en **PWA** (Progressive Web App).
 
-> Status: idéstadiet. Dokumentet beskriver vad appen ska bli och fylls på efter hand.
+> Status: tidigt skelett (inloggning + resa-lista). Dokumentet beskriver vad appen ska bli och fylls på efter hand.
 
 ---
 
@@ -155,30 +155,85 @@ Därefter kommer dagens text, Instagram-rutan, galleriet och GPS-spåret:
 - Appen skapar automatiskt **webbanpassade versioner** i `.webp`, samma som sajten använder idag: galleribilder ca 800 px breda och en omslagsbild (`cover.webp`) ca 2600×1040.
 - Originalen sparas alltid orörda.
 
-## 8. Teknik (förslag)
+## 8. Teknik
 
 | Del | Val |
 |-----|-----|
 | Databas, inloggning, API | [PocketBase](https://pocketbase.io/) |
+| Gränssnitt | [SvelteKit](https://svelte.dev/docs/kit) (Svelte 5, TypeScript) byggd som statisk app (SPA) |
+| Utseende | [Tailwind CSS](https://tailwindcss.com/), ljust och mörkt tema efter enhetens inställning |
+| PWA | [@vite-pwa/sveltekit](https://vite-pwa-org.netlify.app/frameworks/sveltekit): manifest och service worker |
+| Offline (senare) | [Dexie](https://dexie.org/) (IndexedDB) som kö för inlägg och bilder utan täckning |
+| Karta (senare) | [MapLibre GL](https://maplibre.org/) + OpenStreetMap, visar även Traccar-spåren |
+| Bilder | Skalas om till `.webp` i mobilen före uppladdning; originalet sparas också |
 | Fillagring | S3 (Synology) via PocketBase |
 | Backup | PocketBase inbyggda S3-backup |
-| Frontend | PWA (ramverk ej bestämt) |
-| Drift | Docker / docker compose |
-| Publicering | GitHub API → `hugo-mcfrojd/husbil` → Cloudflare Pages |
+| Publicering | PocketBase JS-hooks (`pb_hooks/`) → GitHub API → `hugo-mcfrojd/husbil` → Cloudflare Pages |
+| Drift | En Docker-container: PocketBase serverar både API och appen |
 
-## 9. Drift och hosting
+### Projektstruktur
 
-Målet är att det ska vara enkelt att köra appen var som helst:
+```
+vararesor/
+├── Dockerfile               bygger web/ och lägger det i PocketBase pb_public/
+├── docker-compose.yml       en tjänst, data i ./pb_data
+├── .env.example             mall för .env
+├── pocketbase/
+│   ├── pb_migrations/       databasschema (körs automatiskt vid start)
+│   └── pb_hooks/            serverlogik, t.ex. publicering (kommer)
+└── web/                     SvelteKit-appen
+    └── src/
+        ├── lib/             PocketBase-klient, inloggning, hjälpfunktioner
+        └── routes/          sidor: / (resor), /login
+```
+
+### Databas (hittills)
+
+| Collection | Innehåll |
+|------------|----------|
+| `users` | Familjens konton (`name`, `email`, `avatar`). Egen registrering är avstängd; konton skapas i admin. |
+| `trips` | Resor: `title`, `type` (`husbil` / `semester` / `egen`), `start_date`, `end_date`, `description`, `cover`, `owner`, `participants`. Syns bara för ägaren och deltagarna. Bara ägaren kan ändra och ta bort. |
+
+## 9. Kom igång
+
+### Köra på en server (Ubuntu, hemma eller Oracle)
+
+Kräver Docker med compose-plugin. Fungerar på både amd64 och arm64 (Oracle Ampere).
 
 ```bash
 git clone https://github.com/mcfrojd/vararesor.git
 cd vararesor
-docker compose up -d
+cp .env.example .env          # justera PORT vid behov
+docker compose up -d --build
 ```
 
-- Körs i en enkel Ubuntu-baserad Docker-miljö.
-- Hostas på någon av hemmaservrarna **eller** på Oracle-servern i molnet.
-- Bakom en reverse proxy med HTTPS.
+Skapa ett administratörskonto för PocketBase:
+
+```bash
+docker compose exec vararesor /pb/pocketbase superuser upsert din@epost.se ett-langt-losenord
+```
+
+Gå sedan till `http://<server>:8090/_/` och:
+
+1. Skapa familjens konton under **users** (namn, e-post, lösenord, bocka i *verified*).
+2. **Settings → Files storage:** koppla S3 mot Synology.
+3. **Settings → Backups:** slå på schemalagd backup till S3.
+4. Sätt **Settings → Application URL** till den publika adressen.
+
+Appen nås på `http://<server>:8090/`. Lägg den bakom en reverse proxy med HTTPS (t.ex. Caddy, Nginx Proxy Manager eller Cloudflare Tunnel). PWA-installation och service worker kräver HTTPS.
+
+**Uppdatera:** `git pull && docker compose up -d --build`. Databasen i `./pb_data` ligger kvar och nya migreringar körs automatiskt.
+
+### Utveckla lokalt
+
+```bash
+docker compose up -d                 # PocketBase på :8090
+cd web
+npm install
+npm run dev                          # appen på :5173, /api skickas vidare till :8090
+```
+
+`npm run check` kör typkontroll och `npm run build` bygger appen.
 
 ## 10. Öppna frågor
 
@@ -188,13 +243,16 @@ docker compose up -d
 - [ ] Ska Traccar-spåren även visas i appen (karta per dag)?
 - [ ] Behövs offline-stöd när vi står utan täckning, med synk när nätet kommer tillbaka?
 - [ ] Karta och GPS: automatisk position på inlägg? Spåra rutten under dagen?
-- [ ] Vilket frontend-ramverk?
+- [x] Vilket frontend-ramverk? **SvelteKit.**
 - [ ] Hur ska film hanteras (storlek, komprimering, publicering)?
 - [ ] Vem ser vad? Är egna resor privata som standard?
 
 ## 11. Nästa steg
 
-1. Förfina den här beskrivningen.
-2. Välja frontend-ramverk.
-3. Sätta upp PocketBase-schema (resor, dagar, inlägg, mallar, media, användare).
-4. Skapa `docker compose`-skelett som går att klona och starta.
+1. ~~Välja frontend-ramverk.~~ SvelteKit.
+2. ~~Skelett med PocketBase + SvelteKit i Docker, inloggning och resa-lista.~~
+3. Skapa och redigera resor (inklusive omslagsbild och deltagare).
+4. Dagar och inlägg med mallar (övernattning, mat och dryck, sevärdhet, fri anteckning).
+5. Bilduppladdning med `.webp`-skalning och S3 mot Synology.
+6. Dagssammanfattning och publicering till husbilendoris.se.
+7. Offline-kö och karta.
