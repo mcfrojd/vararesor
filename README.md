@@ -90,30 +90,69 @@ Man kan alltså **gå tillbaka** och publicera dagar man missat, eller **uppdate
 
 ### Hur publiceringen fungerar
 
-husbilendoris.se är en statisk sajt (Hugo) som ligger i ett privat GitHub-repo (`hugo-mcfrojd/husbil`). Varje ändring i repot publiceras automatiskt via **Cloudflare Pages**.
+husbilendoris.se är en Hugo-sajt (tema Beautiful Hugo) i det privata repot [`hugo-mcfrojd/husbil`](https://github.com/hugo-mcfrojd/husbil). En push till `master` gör att **Cloudflare Pages** bygger och publicerar sajten automatiskt.
 
-Publicering från appen blir därför en **commit till det repot**:
+Publicering från appen blir därför en **commit till det repot via GitHub API**. Sajten gör redan så för GPS-spåren (`functions/api/tracks/`), så mönstret är beprövat.
 
 ```
 Våra resor (PocketBase)
-   │  1. Bygger dagens inlägg som Markdown (front matter + text)
-   │  2. Skalar om valda bilder till webbstorlek
+   │  1. Bygger dagens index.md (front matter + text + shortcodes)
+   │  2. Skapar cover.webp och webbanpassade bilder i images/
    ▼
-GitHub API  →  commit till hugo-mcfrojd/husbil
+GitHub API → en commit till hugo-mcfrojd/husbil (master)
    ▼
-Cloudflare Pages bygger och publicerar husbilendoris.se
+Cloudflare Pages kör build.sh → husbilendoris.se
 ```
 
-- Varje dag blir **en Markdown-fil** (t.ex. `content/<resa>/<datum>.md`) med bilder bredvid, enligt sajtens befintliga struktur.
-- Filen har en **fast sökväg** per dag. En ompublicering skriver över samma fil i stället för att skapa en ny.
-- Allt skickas i **en commit per publicering**, så att sajten byggs en gång.
-- Anropet görs från servern (PocketBase), aldrig från webbläsaren. GitHub-token är en *fine-grained* token med skrivrätt bara till `husbil`-repot och sparas som hemlighet på servern.
-- Appen sparar vilken commit och vilket innehåll som publicerades. Då kan den visa om dagen ändrats efter publicering.
+#### Format som appen ska skapa
+
+Samma struktur som sajtens befintliga dagar och `dag`-arketypen (`archetypes/dag.md`):
+
+```
+content/resor/<resa>/            t.ex. tyskland-2026
+├── _index.md                    resans sida (skapas när resan publiceras första gången)
+├── <resa>.webp                  resans omslagsbild
+└── dagNN/                       dag01, dag02 …
+    ├── index.md                 dagens text
+    ├── cover.webp               stor rubrikbild (ca 2600×1040)
+    └── images/*.webp            galleribilder (ca 800 px bred)
+```
+
+Front matter i `dagNN/index.md`:
+
+```yaml
+---
+title: 'Dag 05 - 28 aug'
+date: 2026-08-28T23:04:49+02:00
+slug: dag05
+draft: false
+type: "post"
+bigimg: [{src: "cover.webp"}]
+image: /resor/tyskland-2026/dag05/cover.webp
+description: "Husbilen Doris Tysklands resa dag 05, Dorfmark till Würzburg"
+Params:
+  tags: ["husbil", "husbilen", "doris", "resa", "resor", "tyskland-2026", "dag05"]
+---
+```
+
+Därefter kommer dagens text, Instagram-rutan, galleriet och GPS-spåret:
+
+```
+{{< shortgallery match="images/*" ... >}}
+{{< track files="doris-2026-08-28.kml" height="450" >}}
+```
+
+- **GPS-spår:** en befintlig GitHub Action hämtar varje morgon gårdagens spår från Traccar till `static/tracks/doris-ÅÅÅÅ-MM-DD.kml`. Appen behöver alltså inte skicka spåret, bara referera till rätt fil utifrån datumet.
+- **Text:** appen föreslår dagens text utifrån inläggen (övernattning, mat och dryck, sevärdheter, fria anteckningar). Man redigerar den innan publicering.
+- **Ompublicering:** varje dag har en fast sökväg (`dagNN/index.md`). En ny publicering skriver över samma filer i stället för att skapa nya. Bilder som tagits bort i appen tas också bort i repot.
+- **En commit per publicering** (Git Data API: blobs → tree → commit), så att sajten bara byggs en gång.
+- **Säkerhet:** anropet görs från servern (PocketBase), aldrig från webbläsaren. Nyckeln är en *fine-grained* GitHub-token med `Contents: write` bara för `husbil`-repot. Den skapas på kontot `hugo-mcfrojd`, eller på `mcfrojd` som är medarbetare i repot, och sparas som hemlighet på servern.
+- **Spårbarhet:** appen sparar publicerad commit och en hash av innehållet per dag. Därigenom vet den när en dag är *ändrad efter publicering*.
 
 ## 7. Bilder och film
 
 - Original lagras på vår privata **S3-lagring** (Synology hemma).
-- Appen skapar automatiskt **webbanpassade versioner** (storlek och kvalitet) för visning och publicering på hemsidan.
+- Appen skapar automatiskt **webbanpassade versioner** i `.webp`, samma som sajten använder idag: galleribilder ca 800 px breda och en omslagsbild (`cover.webp`) ca 2600×1040.
 - Originalen sparas alltid orörda.
 
 ## 8. Teknik (förslag)
@@ -143,9 +182,10 @@ docker compose up -d
 
 ## 10. Öppna frågor
 
-- [x] Vad körs husbilendoris.se på? **Hugo i GitHub-repot `hugo-mcfrojd/husbil`, publiceras via Cloudflare Pages.**
-- [ ] Hur ser innehållsstrukturen i `husbil`-repot ut idag (mappar, front matter, bildhantering, page bundles)? Appens export ska matcha den.
-- [ ] Ska bilder till hemsidan ligga i `husbil`-repot, eller länkas från en publik lagring (t.ex. Cloudflare R2) så att repot inte växer?
+- [x] Vad körs husbilendoris.se på? **Hugo i `hugo-mcfrojd/husbil`, publiceras via Cloudflare Pages.**
+- [x] Innehållsstruktur? **Page bundles `content/resor/<resa>/dagNN/` med `index.md`, `cover.webp` och `images/` (se avsnitt 6).**
+- [ ] Bilderna ligger i repot idag (`content/resor` är ca 150 MB). Ska det fortsätta så, eller ska bilderna på sikt ligga i en publik lagring (t.ex. Cloudflare R2)?
+- [ ] Ska Traccar-spåren även visas i appen (karta per dag)?
 - [ ] Behövs offline-stöd när vi står utan täckning, med synk när nätet kommer tillbaka?
 - [ ] Karta och GPS: automatisk position på inlägg? Spåra rutten under dagen?
 - [ ] Vilket frontend-ramverk?
