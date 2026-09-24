@@ -52,6 +52,43 @@ export function daysBefore(value: string, n: number): string {
 	return isoDay(d);
 }
 
+const monthFmt = new Intl.DateTimeFormat('sv-SE', { month: 'long', year: 'numeric' });
+const longDayFmt = new Intl.DateTimeFormat('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** "September 2026" för en månad "ÅÅÅÅ-MM". */
+export function formatMonth(month: string): string {
+	return capitalize(monthFmt.format(parseDay(month + '-01')));
+}
+
+/** "Tisdag 22 september" */
+export function formatLongDay(value: string): string {
+	return capitalize(longDayFmt.format(parseDay(value)));
+}
+
+/** Månaden före/efter "ÅÅÅÅ-MM". */
+export function addMonths(month: string, n: number): string {
+	const d = parseDay(month + '-01');
+	d.setMonth(d.getMonth() + n);
+	return isoDay(d).slice(0, 7);
+}
+
+/**
+ * Dagarna i kalendervyn för en månad: hela veckor från måndag till söndag,
+ * inklusive dagar från månaderna runt omkring.
+ */
+export function calendarDays(month: string): string[] {
+	const first = parseDay(month + '-01');
+	const start = new Date(first);
+	start.setDate(1 - ((first.getDay() + 6) % 7)); // backa till måndag
+	const last = new Date(first.getFullYear(), first.getMonth() + 1, 0);
+	const days: string[] = [];
+	for (const d = start; d <= last || days.length % 7 !== 0; d.setDate(d.getDate() + 1)) {
+		days.push(isoDay(d));
+	}
+	return days;
+}
+
 /** "mån 24 aug" */
 export function formatDay(value: string): string {
 	return dayFmt.format(parseDay(value));

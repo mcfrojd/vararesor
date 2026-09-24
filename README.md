@@ -2,7 +2,7 @@
 
 En enkel och stilren resedagbok för familjen, byggd som en **PWA** (Progressive Web App).
 
-> Status: tidigt skede (inloggning, resor, dagar och inlägg med mallar, karta, offline). Bilder kommer härnäst. Dokumentet beskriver vad appen ska bli och fylls på efter hand.
+> Status: tidigt skede (inloggning, resor, dagar och inlägg med mallar, karta, kalender, väder, offline). Bilder kommer härnäst. Dokumentet beskriver vad appen ska bli och fylls på efter hand.
 
 ---
 
@@ -168,6 +168,7 @@ Därefter kommer dagens text, Instagram-rutan, galleriet och GPS-spåret:
 | Bilder | Skalas om till `.webp` i mobilen före uppladdning; originalet sparas också |
 | Fillagring | S3 (Synology) via PocketBase |
 | Backup | PocketBase inbyggda S3-backup |
+| Väder | [Open-Meteo](https://open-meteo.com/) (gratis, ingen API-nyckel). Hämtas av servern (`pb_hooks/weather.js`) och sparas på inlägget. |
 | Publicering | PocketBase JS-hooks (`pb_hooks/`) → GitHub API → `hugo-mcfrojd/husbil` → Cloudflare Pages |
 | Drift | En Docker-container: PocketBase serverar både API och appen |
 
@@ -180,11 +181,11 @@ vararesor/
 ├── .env.example             mall för .env
 ├── pocketbase/
 │   ├── pb_migrations/       databasschema (körs automatiskt vid start)
-│   └── pb_hooks/            serverlogik, t.ex. publicering (kommer)
+│   └── pb_hooks/            serverlogik: väder (weather.js), publicering (kommer)
 └── web/                     SvelteKit-appen
     └── src/
         ├── lib/             PocketBase-klient, inloggning, hjälpfunktioner
-        └── routes/          sidor: / (resor), /login, /profil, /trips/new,
+        └── routes/          sidor: / (resor), /login, /profil, /kalender, /trips/new,
                              /trips/[id] (resa + dagar), /trips/[id]/edit,
                              /trips/[id]/posts/new, /trips/[id]/posts/[postId](/edit),
                              /karta (alla platser)
@@ -196,7 +197,7 @@ vararesor/
 |------------|----------|
 | `users` | Familjens konton (`name`, `email`, `avatar`). Egen registrering är avstängd; konton skapas i admin. Inloggade ser varandras namn och avatar (för att kunna välja deltagare), men e-post syns bara för en själv. |
 | `trips` | Resor: `title`, `type` (`husbil` / `semester` / `egen`), `start_date`, `end_date`, `description`, `cover`, `owner`, `participants`. Syns bara för ägaren och deltagarna. Bara ägaren kan ändra och ta bort. |
-| `posts` | Inlägg: `trip`, `author`, `kind` (`overnight` / `food` / `sight` / `note`), `day`, `time` (valfri, TT:MM; utan tid sorteras inlägget efter när det skapades), `title`, `category`, `body`, `rating` (0–5), `price`, `location` (geoPoint), `details` (JSON med mallens egna fält: faciliteter, betalsätt, underlag, utsikt, ljudnivå, vad vi åt, öppettider). Syns för resans ägare och deltagare, som också kan skriva. Bara författaren ändrar; författaren eller resans ägare kan ta bort. Tas bort med resan. |
+| `posts` | Inlägg: `trip`, `author`, `kind` (`overnight` / `food` / `sight` / `note`), `day`, `time` (valfri, TT:MM; utan tid sorteras inlägget efter när det skapades), `title`, `category`, `body`, `rating` (0–5), `price`, `location` (geoPoint), `weather` (JSON, sätts av servern), `details` (JSON med mallens egna fält: faciliteter, betalsätt, underlag, utsikt, ljudnivå, vad vi åt, öppettider). Syns för resans ägare och deltagare, som också kan skriva. Bara författaren ändrar; författaren eller resans ägare kan ta bort. Tas bort med resan. |
 
 ### Karta
 
@@ -215,6 +216,16 @@ Kartbilderna hämtas från OpenFreeMap och sparas inte offline än.
 - **Skriva:** nya inlägg utan nät (eller när anropet inte kommer fram) läggs i en kö på enheten och visas streckade med "Väntar på nät". Kön skickas när nätet kommer tillbaka och var 30:e sekund. Inlägget får sitt id i appen, så ett nytt försök skapar aldrig dubbletter.
 - **Inte offline än:** ändra eller ta bort befintliga inlägg, skapa resor, kartbilder.
 - **Utloggning** tömmer kön och cachen på enheten, och varnar om något inte skickats.
+
+### Väder
+
+Varje inlägg med position får dagens väder: lägsta, högsta och snitttemperatur, väderkod och nederbörd. Servern hämtar det från Open-Meteo när inlägget sparas eller får ny dag eller plats, och sparar det på inlägget. Dagar som inte är över får en prognos, som byts mot riktiga värden av ett jobb varje timme (`cronAdd` i `pb_hooks/weather.pb.js`). Samma jobb fyller i väder som saknas, t.ex. för äldre inlägg eller när Open-Meteo inte svarade. Äldre dagar än ca 80 dagar hämtas från Open-Meteos arkiv. Inläggets koordinater skickas till Open-Meteo, men inget annat.
+
+Vädret visas som en pastill på inlägget och i dagens rubrik (från första inlägget med väder).
+
+### Kalender
+
+`/kalender` visar en månad i taget, med början på måndag. Dagar under en resa är markerade och visar ikoner för dagens inlägg och väder. Tryck på en dag för att se inläggen och lägga till nya på resan den dagen. Vald dag och månad ligger i adressen.
 
 Dagarna räknas fram ur resans datum (dag 1 = startdatum) och inläggens `day`; det finns ingen egen tabell för dagar än. Den kommer med publiceringen, där varje dag behöver egen status, sammanfattning och commit.
 

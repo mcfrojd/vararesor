@@ -1,4 +1,5 @@
 import PocketBase from 'pocketbase';
+import type { Weather } from './weather';
 
 /** Appen serveras av PocketBase, så API:t ligger på samma adress. */
 export const pb = new PocketBase('/');
@@ -58,6 +59,8 @@ export interface Post {
 	price: string;
 	location: GeoPoint;
 	details: PostDetails | null;
+	/** Väder för dagen och platsen, satt av servern. */
+	weather?: Weather | null;
 	created: string;
 	expand?: {
 		author?: User;

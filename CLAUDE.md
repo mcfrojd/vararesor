@@ -37,7 +37,8 @@ Klart:
 - Resor (`trips`): skapa, visa, redigera, ta bort, omslagsbild och deltagare. Bara ägare/deltagare ser, bara ägaren ändrar.
 - Dagar och inlägg (`posts`) med mallar: övernattning, mat och dryck, sevärdhet, anteckning. Dagarna räknas fram ur resans datum.
 - Karta (MapLibre + OpenFreeMap, ingen nyckel) på resa, inlägg och `/karta`, med Doris GPS-spår och filter för typ, spår och period.
-- Tid på inlägg, startsida med pågående/kommande/tidigare resor.
+- Tid på inlägg, startsida med pågående/kommande/tidigare resor, kalender (`/kalender`).
+- Väder per inlägg från Open-Meteo via `pocketbase/pb_hooks/weather.js` (hookar i `weather.pb.js`, timjobb `weather`). Hookar körs isolerat: delad kod via `require(`${__hooks}/weather.js`)`. Spara utan nya hookar med `app.unsafeWithoutHooks().save()`.
 - Utseende i stil med jorial.app: se klasserna i `web/src/app.css` (`card`, `field`, `label`, `chip`, `title`, `btn-*`) och komponenterna `Icon`, `Fab`, `BackLink`. Använd dem i stället för egna Tailwind-kombinationer.
 - Offline: appen och lästa data cachas av service workern; nya inlägg köas i Dexie (`src/lib/offline.svelte.ts`) och skickas när nätet är tillbaka.
 

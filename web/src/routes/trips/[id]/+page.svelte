@@ -10,6 +10,7 @@
 	import { hasLocation, mapPoints, sortPosts } from '$lib/posts';
 	import { loadDorisTracks, type Line } from '$lib/tracks';
 	import TripMap from '$lib/TripMap.svelte';
+	import { dayWeather, tempRange, weatherInfo } from '$lib/weather';
 	import BackLink from '$lib/BackLink.svelte';
 	import Fab from '$lib/Fab.svelte';
 	import Icon from '$lib/Icon.svelte';
@@ -153,11 +154,17 @@
 			{#each days as day (day)}
 				{@const n = dayNumber(trip.start_date, day)}
 				{@const posts = postsByDay[day] ?? []}
+				{@const w = dayWeather(posts)}
 				<li id="dag-{day}" class="scroll-mt-24">
 					<div class="mb-3 flex items-baseline justify-between gap-3">
 						<h3 class="flex flex-wrap items-baseline gap-x-2">
 							<span class="title text-2xl">{n ? `Dag ${n}` : 'Före resan'}</span>
 							<span class="text-sm text-muted">{formatDay(day)}</span>
+							{#if w}
+								<span class="text-sm text-muted" title={weatherInfo(w.code).label}>
+									· {weatherInfo(w.code).icon} {tempRange(w)}
+								</span>
+							{/if}
 							{#if day === todayDay}
 								<span class="rounded-full bg-rust-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rust">
 									I dag

@@ -8,6 +8,7 @@
 	import Stars from '$lib/Stars.svelte';
 	import { mapPoints } from '$lib/posts';
 	import TripMap from '$lib/TripMap.svelte';
+	import WeatherPill from '$lib/WeatherPill.svelte';
 	import BackLink from '$lib/BackLink.svelte';
 	import Icon from '$lib/Icon.svelte';
 
@@ -83,6 +84,8 @@
 	</div>
 
 	{#if post.body}<p class="whitespace-pre-line text-[17px] leading-relaxed">{post.body}</p>{/if}
+
+	{#if post.weather}<p><WeatherPill weather={post.weather} detailed /></p>{/if}
 
 	{#if facts.length > 0}
 		<dl class="divide-y divide-line rounded-2xl bg-field px-4">
