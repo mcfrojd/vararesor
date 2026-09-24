@@ -25,6 +25,7 @@
 		<div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
 			<a href="/" class="text-lg font-semibold tracking-tight">Våra resor</a>
 			<div class="flex items-center gap-3 text-sm">
+				<a href="/karta" class="text-muted hover:text-ink">🗺️ Karta</a>
 				<span class="text-muted">{auth.user.name || auth.user.email}</span>
 				<button
 					class="rounded-full border border-line px-3 py-1 hover:bg-accent-soft"

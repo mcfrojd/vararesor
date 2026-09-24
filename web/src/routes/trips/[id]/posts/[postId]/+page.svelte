@@ -6,6 +6,8 @@
 	import { pb } from '$lib/pb';
 	import { formatLocation, hasLocation, mapUrl, postKinds } from '$lib/posts';
 	import Stars from '$lib/Stars.svelte';
+	import { mapPoints } from '$lib/posts';
+	import TripMap from '$lib/TripMap.svelte';
 
 	let { data } = $props();
 
@@ -93,6 +95,7 @@
 	{#if post.body}<p class="whitespace-pre-line">{post.body}</p>{/if}
 
 	{#if hasLocation(post.location)}
+		<TripMap points={mapPoints([post], trip.start_date)} class="h-52" />
 		<a
 			href={mapUrl(post.location)}
 			target="_blank"

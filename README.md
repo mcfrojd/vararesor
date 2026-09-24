@@ -2,7 +2,7 @@
 
 En enkel och stilren resedagbok för familjen, byggd som en **PWA** (Progressive Web App).
 
-> Status: tidigt skede (inloggning, resor, dagar och inlägg med mallar). Bilder kommer härnäst. Dokumentet beskriver vad appen ska bli och fylls på efter hand.
+> Status: tidigt skede (inloggning, resor, dagar och inlägg med mallar, karta). Bilder kommer härnäst. Dokumentet beskriver vad appen ska bli och fylls på efter hand.
 
 ---
 
@@ -164,7 +164,7 @@ Därefter kommer dagens text, Instagram-rutan, galleriet och GPS-spåret:
 | Utseende | [Tailwind CSS](https://tailwindcss.com/), ljust och mörkt tema efter enhetens inställning |
 | PWA | [@vite-pwa/sveltekit](https://vite-pwa-org.netlify.app/frameworks/sveltekit): manifest och service worker |
 | Offline (senare) | [Dexie](https://dexie.org/) (IndexedDB) som kö för inlägg och bilder utan täckning |
-| Karta (senare) | [MapLibre GL](https://maplibre.org/) + OpenStreetMap, visar även Traccar-spåren |
+| Karta | [MapLibre GL](https://maplibre.org/) med gratis kartor från [OpenFreeMap](https://openfreemap.org/) (OpenStreetMap-data, ingen API-nyckel). Husbilsresor visar Doris körda spår. |
 | Bilder | Skalas om till `.webp` i mobilen före uppladdning; originalet sparas också |
 | Fillagring | S3 (Synology) via PocketBase |
 | Backup | PocketBase inbyggda S3-backup |
@@ -186,7 +186,8 @@ vararesor/
         ├── lib/             PocketBase-klient, inloggning, hjälpfunktioner
         └── routes/          sidor: / (resor), /login, /trips/new,
                              /trips/[id] (resa + dagar), /trips/[id]/edit,
-                             /trips/[id]/posts/new, /trips/[id]/posts/[postId](/edit)
+                             /trips/[id]/posts/new, /trips/[id]/posts/[postId](/edit),
+                             /karta (alla platser)
 ```
 
 ### Databas (hittills)
@@ -196,6 +197,14 @@ vararesor/
 | `users` | Familjens konton (`name`, `email`, `avatar`). Egen registrering är avstängd; konton skapas i admin. Inloggade ser varandras namn och avatar (för att kunna välja deltagare), men e-post syns bara för en själv. |
 | `trips` | Resor: `title`, `type` (`husbil` / `semester` / `egen`), `start_date`, `end_date`, `description`, `cover`, `owner`, `participants`. Syns bara för ägaren och deltagarna. Bara ägaren kan ändra och ta bort. |
 | `posts` | Inlägg: `trip`, `author`, `kind` (`overnight` / `food` / `sight` / `note`), `day`, `title`, `category`, `body`, `rating` (0–5), `price`, `location` (geoPoint), `details` (JSON med mallens egna fält: faciliteter, betalsätt, underlag, utsikt, ljudnivå, vad vi åt, öppettider). Syns för resans ägare och deltagare, som också kan skriva. Bara författaren ändrar; författaren eller resans ägare kan ta bort. Tas bort med resan. |
+
+### Karta
+
+- **Resans sida:** inläggen med position som markörer. Husbilsresor visar också Doris körda spår (heldragen linje); andra resor får en streckad linje mellan inläggen i tidsordning.
+- **Inlägg:** liten karta över platsen, plus länk till OpenStreetMap.
+- **/karta:** alla platser från alla resor man har tillgång till.
+
+Kartbilderna hämtas från OpenFreeMap och sparas inte offline än.
 
 Dagarna räknas fram ur resans datum (dag 1 = startdatum) och inläggens `day`; det finns ingen egen tabell för dagar än. Den kommer med publiceringen, där varje dag behöver egen status, sammanfattning och commit.
 
@@ -245,7 +254,7 @@ npm run dev                          # appen på :5173, /api skickas vidare till
 - [x] Vad körs husbilendoris.se på? **Hugo i `hugo-mcfrojd/husbil`, publiceras via Cloudflare Pages.**
 - [x] Innehållsstruktur? **Page bundles `content/resor/<resa>/dagNN/` med `index.md`, `cover.webp` och `images/` (se avsnitt 6).**
 - [ ] Bilderna ligger i repot idag (`content/resor` är ca 150 MB). Ska det fortsätta så, eller ska bilderna på sikt ligga i en publik lagring (t.ex. Cloudflare R2)?
-- [ ] Ska Traccar-spåren även visas i appen (karta per dag)?
+- [x] Ska Traccar-spåren även visas i appen? **Ja, på husbilsresornas karta. Appen läser `husbilendoris.se/tracks/doris-ÅÅÅÅ-MM-DD.kml` direkt (publika, CORS öppet).**
 - [ ] Behövs offline-stöd när vi står utan täckning, med synk när nätet kommer tillbaka?
 - [ ] Karta och GPS: automatisk position på inlägg? Spåra rutten under dagen?
 - [x] Vilket frontend-ramverk? **SvelteKit.**
@@ -260,4 +269,4 @@ npm run dev                          # appen på :5173, /api skickas vidare till
 4. ~~Dagar och inlägg med mallar (övernattning, mat och dryck, sevärdhet, fri anteckning).~~
 5. Bilduppladdning med `.webp`-skalning och S3 mot Synology.
 6. Dagssammanfattning och publicering till husbilendoris.se.
-7. Offline-kö och karta.
+7. Offline-kö. ~~Karta.~~

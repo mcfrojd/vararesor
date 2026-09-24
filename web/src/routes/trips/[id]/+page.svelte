@@ -4,6 +4,9 @@
 	import { dayNumber, formatDateRange, formatDay, today, tripDays, tripTypes } from '$lib/format';
 	import { pb, type Post } from '$lib/pb';
 	import PostCard from '$lib/PostCard.svelte';
+	import { mapPoints } from '$lib/posts';
+	import { loadDorisTracks, type Line } from '$lib/tracks';
+	import TripMap from '$lib/TripMap.svelte';
 
 	let { data } = $props();
 
@@ -22,6 +25,22 @@
 	);
 	const days = $derived(tripDays(trip.start_date, trip.end_date, Object.keys(postsByDay)));
 	const todayDay = today();
+
+	const points = $derived(mapPoints(data.posts, trip.start_date));
+
+	// Husbilsresor: hämta Doris körda spår för de dagar som varit.
+	let tracks = $state<Line[]>([]);
+	$effect(() => {
+		tracks = [];
+		if (trip.type !== 'husbil') return;
+		let cancelled = false;
+		loadDorisTracks(days.filter((d) => d < todayDay)).then((t) => {
+			if (!cancelled) tracks = t;
+		});
+		return () => {
+			cancelled = true;
+		};
+	});
 </script>
 
 <svelte:head><title>{trip.title} · Våra resor</title></svelte:head>
@@ -69,6 +88,18 @@
 		{/if}
 	</div>
 </article>
+
+{#if points.length > 0 || tracks.length > 0}
+	<section class="mt-8">
+		<h2 class="mb-3 text-xl font-semibold tracking-tight">Karta</h2>
+		<TripMap {points} {tracks} connect={tracks.length === 0} />
+		{#if tracks.length > 0}
+			<p class="mt-2 text-xs text-muted">Heldragen linje: Doris körda spår.</p>
+		{:else if points.length > 1}
+			<p class="mt-2 text-xs text-muted">Streckad linje: ungefärlig rutt mellan inläggen.</p>
+		{/if}
+	</section>
+{/if}
 
 <section class="mt-8">
 	<div class="mb-3 flex items-center justify-between">

@@ -1,4 +1,6 @@
-import type { GeoPoint, PostKind } from './pb';
+import { dayNumber, formatDay } from './format';
+import type { GeoPoint, Post, PostKind } from './pb';
+import type { MapPoint } from './TripMap.svelte';
 
 export interface KindConfig {
 	label: string;
@@ -78,4 +80,20 @@ export function parseLocation(text: string): GeoPoint | null {
 
 export function mapUrl(p: GeoPoint): string {
 	return `https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lon}#map=16/${p.lat}/${p.lon}`;
+}
+
+/** Inläggen som har position, som punkter för kartan (i ordning). */
+export function mapPoints(posts: Post[], tripStart = '', tripTitle = ''): MapPoint[] {
+	return posts.filter((p) => hasLocation(p.location)).map((p) => {
+		const n = dayNumber(tripStart, p.day);
+		return {
+			id: p.id,
+			lat: p.location.lat,
+			lon: p.location.lon,
+			kind: p.kind,
+			title: p.title || postKinds[p.kind].label,
+			subtitle: [tripTitle, n ? `Dag ${n}` : '', formatDay(p.day)].filter(Boolean).join(' · '),
+			href: `/trips/${p.trip}/posts/${p.id}`
+		};
+	});
 }
