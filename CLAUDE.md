@@ -32,9 +32,15 @@ Verifiera UI-ändringar med Playwright (Chromium) i både mobilbredd (390px) och
 
 ## Status
 
-Klart: skelett med inloggning, resa-lista, `trips`-collection med regler (bara ägare/deltagare ser, bara ägare ändrar), egen registrering avstängd, Docker för amd64/arm64.
+Klart:
+- Skelett med inloggning, egen registrering avstängd, Docker för amd64/arm64.
+- Resor (`trips`): skapa, visa, redigera, ta bort, omslagsbild och deltagare. Bara ägare/deltagare ser, bara ägaren ändrar.
+- Dagar och inlägg (`posts`) med mallar: övernattning, mat och dryck, sevärdhet, anteckning. Dagarna räknas fram ur resans datum.
+- Karta (MapLibre + OpenFreeMap, ingen nyckel) på resa, inlägg och `/karta`, med Doris GPS-spår och filter för typ, spår och period.
 
-Nästa steg: se avsnitt 11 i README.md (skapa/redigera resor → dagar och inlägg med mallar → bilder med webp-skalning → publicering → offline och karta).
+Nästa steg: se avsnitt 11 i README.md (bilder med webp-skalning och S3 → publicering → offline).
+
+Tips vid test: skapa en tillfällig superuser och testkonton `*@example.com`, och ta bort dem efteråt. MapLibre i headless Chromium behöver `--use-angle=swiftshader --enable-unsafe-swiftshader`.
 
 ## Publicering till husbilendoris.se
 
