@@ -94,7 +94,8 @@
 			trips={tripChoices}
 		/>
 	</div>
-	<TripMap {points} {tracks} class="h-[65dvh]" />
+	<!-- Större karta: nästan hela skärmen under raden överst (alltid högre än 65 %). -->
+	<TripMap {points} {tracks} class="h-[65dvh]" bigClass="sm:h-[calc(100dvh-6rem)]" />
 	{#if filter.tracks && tooManyTrackDays}
 		<p class="mt-2 text-xs text-muted">
 			GPS-spår visas för de senaste {MAX_TRACK_DAYS} dagarna i perioden. Välj en kortare period för

@@ -30,7 +30,8 @@
 		points,
 		tracks = [],
 		connect = false,
-		class: className = 'h-72'
+		class: className = 'h-72',
+		bigClass = 'sm:h-[min(54rem,85dvh)]'
 	}: {
 		points: MapPoint[];
 		/** Körda spår (t.ex. Doris GPS), ritas som heldragna linjer. */
@@ -38,6 +39,8 @@
 		/** Dra en streckad linje mellan punkterna i ordning (ungefärlig rutt). */
 		connect?: boolean;
 		class?: string;
+		/** Höjden för "Större karta" på större skärmar. Måste vara större än `class`. */
+		bigClass?: string;
 	} = $props();
 
 	let container: HTMLDivElement;
@@ -242,7 +245,7 @@
      MapLibre lägger till egna klasser där som inte får skrivas över. -->
 <div
 	class="w-full overflow-hidden bg-card {big
-		? 'fixed inset-0 z-50 h-dvh sm:relative sm:inset-auto sm:z-auto sm:h-[min(54rem,85dvh)] sm:rounded-3xl sm:border sm:border-line sm:shadow-soft'
+		? `fixed inset-0 z-50 h-dvh sm:relative sm:inset-auto sm:z-auto ${bigClass} sm:rounded-3xl sm:border sm:border-line sm:shadow-soft`
 		: `relative ${className} rounded-3xl border border-line shadow-soft`}"
 >
 	<div bind:this={container} class="h-full w-full"></div>
