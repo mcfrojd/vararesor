@@ -37,6 +37,7 @@
 	let nextKey = 0;
 	let preparing = $state(0);
 	let saving = $state(false);
+	let saveError = $state('');
 
 	const tripById = (id: string) => data.trips.find((t) => t.id === id);
 	const postsOf = (trip: string) => data.posts.filter((p) => p.trip === trip);
@@ -135,10 +136,17 @@
 	async function upload() {
 		if (ready.length === 0) return;
 		saving = true;
-		await enqueuePhotos(
-			ready.map((it) => ({ photo: it.prepared!, trip: it.trip, post: it.trip ? it.post : '', day: it.day })),
-			{ trip: '', author: auth.user?.id ?? '' }
-		);
+		saveError = '';
+		try {
+			await enqueuePhotos(
+				ready.map((it) => ({ photo: it.prepared!, trip: it.trip, post: it.trip ? it.post : '', day: it.day })),
+				{ trip: '', author: auth.user?.id ?? '' }
+			);
+		} catch (err) {
+			saving = false;
+			saveError = `Kunde inte lägga bilderna i kön: ${err instanceof Error ? err.message : String(err)}`;
+			return;
+		}
 		const trips = new Set(ready.map((it) => it.trip));
 		goto(trips.size === 1 ? `/bilder/${[...trips][0] || 'okategoriserat'}` : '/bilder', { replaceState: true });
 	}
@@ -248,5 +256,6 @@
 		<button type="button" onclick={upload} disabled={saving || preparing > 0 || ready.length === 0} class="btn-primary w-full">
 			{preparing > 0 ? 'Förbereder…' : `Ladda upp ${ready.length} ${ready.length === 1 ? 'bild' : 'bilder'}`}
 		</button>
+		{#if saveError}<p class="mt-2 text-sm text-red-600" role="alert">{saveError}</p>{/if}
 	</div>
 {/if}

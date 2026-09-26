@@ -38,7 +38,8 @@ export interface QueuedPhoto {
 	data: PhotoData;
 	web: Blob;
 	thumb: Blob;
-	original: Blob;
+	/** Null om mobilen inte lämnade ut originalet; då laddas bara webp-filerna upp. */
+	original: Blob | null;
 	originalName: string;
 	/** 'new' = inget skickat än, 'original' = bara originalet kvar. */
 	stage: 'new' | 'original';
@@ -178,38 +179,54 @@ export interface PhotoToQueue {
 
 export async function enqueuePhotos(items: PhotoToQueue[], base: Pick<PhotoData, 'trip' | 'author'>) {
 	const now = Date.now();
-	await db.photos.bulkPut(
-		items.map(({ photo: p, post, day, trip }, i) => {
-			const id = newId();
-			return {
+	const records: QueuedPhoto[] = items.map(({ photo: p, post, day, trip }, i) => {
+		const id = newId();
+		return {
+			id,
+			data: {
+				...base,
+				trip: trip ?? base.trip,
 				id,
-				data: {
-					...base,
-					trip: trip ?? base.trip,
-					id,
-					post,
-					day,
-					taken: p.taken,
-					taken_at: p.takenAt,
-					width: p.width,
-					height: p.height,
-					// Bara bildens egen position. Saknas den försöker servern med Doris
-					// spår, och annars visas bilden vid inläggets position.
-					location: p.location ? { lat: p.location.lat, lon: p.location.lon } : { lat: 0, lon: 0 },
-					location_source: p.location ? ('exif' as const) : ('' as const)
-				},
-				web: p.web,
-				thumb: p.thumb,
-				original: p.original,
-				originalName: p.original.name || `${id}.jpg`,
-				stage: 'new' as const,
-				// Samma ordning i kön som man valde bilderna.
-				queuedAt: new Date(now + i).toISOString()
-			};
-		})
-	);
+				post,
+				day,
+				taken: p.taken,
+				taken_at: p.takenAt,
+				width: p.width,
+				height: p.height,
+				// Bara bildens egen position. Saknas den försöker servern med Doris
+				// spår, och annars visas bilden vid inläggets position.
+				location: p.location ? { lat: p.location.lat, lon: p.location.lon } : { lat: 0, lon: 0 },
+				location_source: p.location ? ('exif' as const) : ('' as const)
+			},
+			web: p.web,
+			thumb: p.thumb,
+			original: p.original,
+			originalName: p.original.name || `${id}.jpg`,
+			stage: 'new' as const,
+			// Samma ordning i kön som man valde bilderna.
+			queuedAt: new Date(now + i).toISOString()
+		};
+	});
+	try {
+		await db.photos.bulkPut(records);
+	} catch {
+		// Androids bildväljare lämnar ibland ut filer som inte går att läsa en
+		// gång till när de ska sparas. Kopiera originalen till minnet; går det
+		// inte alls laddas bilden upp utan original (webp-filerna finns redan).
+		for (const r of records) r.original = await memoryCopy(r.original);
+		await db.photos.bulkPut(records);
+	}
 	await refresh();
 	void sync();
+}
+
+async function memoryCopy(file: Blob | null): Promise<Blob | null> {
+	if (!file) return null;
+	try {
+		return new Blob([await file.arrayBuffer()], { type: file.type || 'image/jpeg' });
+	} catch {
+		return null;
+	}
 }
 
 /**
@@ -269,6 +286,10 @@ async function sendPhoto(item: QueuedPhoto) {
 		await db.photos.update(item.id, { stage: 'original' });
 		item.stage = 'original';
 		await refresh();
+	}
+	if (!item.original) {
+		await db.photos.delete(item.id);
+		return;
 	}
 	const form = new FormData();
 	form.append('original', item.original, item.originalName);

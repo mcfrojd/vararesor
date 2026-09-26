@@ -30,6 +30,7 @@
 	let nextKey = 0;
 	let preparing = $state(0);
 	let saving = $state(false);
+	let saveError = $state('');
 
 	// svelte-ignore state_referenced_locally
 	const fallbackDay = defaultDay(trip.start_date, trip.end_date);
@@ -108,10 +109,17 @@
 	async function upload() {
 		if (ready.length === 0) return;
 		saving = true;
-		await enqueuePhotos(
-			ready.map((it) => ({ photo: it.prepared!, post: it.post ?? '', day: it.day ?? fallbackDay })),
-			{ trip: trip.id, author: auth.user?.id ?? '' }
-		);
+		saveError = '';
+		try {
+			await enqueuePhotos(
+				ready.map((it) => ({ photo: it.prepared!, post: it.post ?? '', day: it.day ?? fallbackDay })),
+				{ trip: trip.id, author: auth.user?.id ?? '' }
+			);
+		} catch (err) {
+			saving = false;
+			saveError = `Kunde inte lägga bilderna i kön: ${err instanceof Error ? err.message : String(err)}`;
+			return;
+		}
 		const first = [...ready].sort((a, b) => (a.day ?? '').localeCompare(b.day ?? ''))[0];
 		goto(`/trips/${trip.id}#dag-${first.day}`, { replaceState: true });
 	}
@@ -221,5 +229,6 @@
 				? 'Förbereder…'
 				: `Ladda upp ${ready.length} ${ready.length === 1 ? 'bild' : 'bilder'}${toPosts ? ` (${toPosts} till inlägg)` : ''}`}
 		</button>
+		{#if saveError}<p class="mt-2 text-sm text-red-600" role="alert">{saveError}</p>{/if}
 	</div>
 {/if}
