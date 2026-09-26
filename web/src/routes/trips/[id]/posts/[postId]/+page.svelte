@@ -4,7 +4,7 @@
 	import Avatar from '$lib/Avatar.svelte';
 	import { dayNumber, formatDay } from '$lib/format';
 	import { pb } from '$lib/pb';
-	import { formatLocation, hasLocation, kindOf, mapUrl, nights, nightsLabel } from '$lib/posts';
+	import { formatLocation, hasLocation, kindOf, mapUrl, mealsOf, nights, nightsLabel } from '$lib/posts';
 	import Stars from '$lib/Stars.svelte';
 	import { mapPoints } from '$lib/posts';
 	import TripMap from '$lib/TripMap.svelte';
@@ -28,7 +28,7 @@
 		[
 			['Utcheckning', d.until ? `${formatDay(d.until)} (${nightsLabel(nights(post))})` : ''],
 			['Rum', d.room],
-			['Frukost', d.breakfast ? 'Ingår' : ''],
+			['Ingår', mealsOf(d).join(', ').replace(/(?<=, )\p{Lu}/gu, (c) => c.toLowerCase())],
 			['Vad vi åt och drack', d.what],
 			[k.priceLabel ?? 'Pris', post.price],
 			['Betalsätt', d.payment],

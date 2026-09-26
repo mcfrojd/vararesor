@@ -57,7 +57,7 @@ Olika typer av inlägg har olika fält. Det gör det snabbt att fylla i på plat
 
 ### Boende: hotell, motell, vandrarhem, lägenhet, stuga, hos vänner/släkt
 
-På resor som inte är husbilsresor. Ett boende gäller från incheckningen (inläggets dag) till **utcheckningen**, som förvalt är resans sista dag, så att ett hotell för hela resan bara behöver ett inlägg. Bor man på flera ställen lägger man till ett boende per ställe. Fält: namn, typ, betyg, pris, betalsätt, rum, frukost ingår, position, anteckning. Dagarna under vistelsen visar "Natt 2 av 7" och på sista dagen "Utcheckning". Lagras som `kind = overnight` med `details.until`, `room`, `breakfast`.
+På resor som inte är husbilsresor. Ett boende gäller från incheckningen (inläggets dag) till **utcheckningen**, som förvalt är resans sista dag, så att ett hotell för hela resan bara behöver ett inlägg. Bor man på flera ställen lägger man till ett boende per ställe. Fält: namn, typ, betyg, pris, betalsätt, rum, vad som ingår (frukost, middag eller all inclusive; frukost och middag går att kombinera, all inclusive står ensam), position, anteckning. Dagarna under vistelsen visar "Natt 2 av 7" och på sista dagen "Utcheckning". Lagras som `kind = overnight` med `details.until`, `room` och `meals` (äldre boenden har `breakfast: true`, som visas som frukost).
 
 ### Mat och dryck
 - Namn, typ (restaurang, café, bar, bryggeri, vingård…)

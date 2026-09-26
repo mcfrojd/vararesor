@@ -43,6 +43,9 @@ export interface PostDetails {
 	/** Boende: utcheckningsdag (ÅÅÅÅ-MM-DD). Inläggets dag är incheckningen. */
 	until?: string;
 	room?: string;
+	/** Boende: måltider som ingår, t.ex. ["Frukost", "Middag"] eller ["All inclusive"]. */
+	meals?: string[];
+	/** Äldre boenden: frukost ingår (ersatt av `meals`). */
 	breakfast?: boolean;
 }
 

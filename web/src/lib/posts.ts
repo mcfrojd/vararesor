@@ -1,5 +1,5 @@
 import { dayNumber, formatDay, localTime } from './format';
-import type { GeoPoint, Photo, Post, PostKind, Trip } from './pb';
+import type { GeoPoint, Photo, Post, PostDetails, PostKind, Trip } from './pb';
 import { photoUrl } from './photos';
 import type { MapPoint } from './TripMap.svelte';
 
@@ -89,6 +89,28 @@ export function nights(p: Pick<Post, 'day' | 'details'>): number {
 }
 
 export const nightsLabel = (n: number) => (n === 1 ? '1 natt' : `${n} nätter`);
+
+/** Måltider som kan ingå i ett boende. All inclusive ersätter de andra. */
+export const ALL_INCLUSIVE = 'All inclusive';
+export const mealOptions: { value: string; icon: string }[] = [
+	{ value: 'Frukost', icon: '☕' },
+	{ value: 'Middag', icon: '🍽️' },
+	{ value: ALL_INCLUSIVE, icon: '🍹' }
+];
+
+/** Måltiderna som ingår, även för äldre boenden som bara hade "frukost ingår". */
+export function mealsOf(d: PostDetails | null | undefined): string[] {
+	return d?.meals ?? (d?.breakfast ? ['Frukost'] : []);
+}
+
+/** Byter en måltid: All inclusive står ensam, och frukost/middag tar bort den. */
+export function toggleMeal(meals: string[], meal: string): string[] {
+	if (meals.includes(meal)) return meals.filter((m) => m !== meal);
+	if (meal === ALL_INCLUSIVE) return [ALL_INCLUSIVE];
+	return [...meals.filter((m) => m !== ALL_INCLUSIVE), meal].sort(
+		(a, b) => mealOptions.findIndex((o) => o.value === a) - mealOptions.findIndex((o) => o.value === b)
+	);
+}
 
 export const facilities = ['El', 'Vatten', 'Gråvattentömning', 'Toatömning', 'Toalett', 'Dusch', 'WiFi'];
 export const noiseLevels = ['Lugnt', 'Visst ljud', 'Högljutt'];

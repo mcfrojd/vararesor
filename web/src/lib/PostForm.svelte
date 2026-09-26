@@ -27,12 +27,15 @@
 		formatLocation,
 		hasLocation,
 		isStay,
+		mealOptions,
+		mealsOf,
 		nights,
 		nightsLabel,
 		noiseLevels,
 		parseLocation,
 		postKinds,
-		stayConfig
+		stayConfig,
+		toggleMeal
 	} from './posts';
 	import Icon from './Icon.svelte';
 	import Stars from './Stars.svelte';
@@ -85,7 +88,11 @@
 	// tömt fältet: då rör servern den aldrig. Tom position utan 'manual' kan
 	// servern fylla i från Doris spår.
 	let locationSource = $state<NonNullable<Post['location_source']>>(initial?.location_source ?? '');
-	let details = $state<PostDetails>({ facilities: [], ...(initial?.details ?? {}) });
+	let details = $state<PostDetails>({
+		facilities: [],
+		...(initial?.details ?? {}),
+		meals: mealsOf(initial?.details)
+	});
 
 	// Boende i stället för ställplats: på resor som inte är husbilsresor, eller
 	// om inlägget redan är ett boende.
@@ -212,7 +219,7 @@
 			return {
 				until: d.until,
 				room: d.room?.trim(),
-				breakfast: !!d.breakfast,
+				meals: d.meals ?? [],
 				payment: d.payment?.trim()
 			};
 		if (k === 'overnight')
@@ -492,16 +499,22 @@
 						{nightsLabel(stayNights)}, {formatDay(day)} – {formatDay(details.until ?? '')}
 					</p>
 				{/if}
-				<div>
-					<button
-						type="button"
-						aria-pressed={!!details.breakfast}
-						onclick={() => (details.breakfast = !details.breakfast)}
-						class="chip"
-					>
-						☕ Frukost ingår
-					</button>
-				</div>
+				<fieldset>
+					<legend class="label mb-2">Ingår</legend>
+					<div class="flex flex-wrap gap-2">
+						{#each mealOptions as m (m.value)}
+							<button
+								type="button"
+								aria-pressed={details.meals?.includes(m.value) ?? false}
+								onclick={() => (details.meals = toggleMeal(details.meals ?? [], m.value))}
+								class="chip"
+							>
+								{m.icon}
+								{m.value}
+							</button>
+						{/each}
+					</div>
+				</fieldset>
 			{/if}
 
 			{#if kind === 'overnight' && !stayMode}
