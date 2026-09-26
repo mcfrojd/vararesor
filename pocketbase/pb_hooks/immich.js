@@ -146,7 +146,8 @@ function backfill(app, limit) {
 	const photos = app.findRecordsByFilter(
 		'photos',
 		"location_source != 'exif' && location_source != 'immich' && taken_at != ''",
-		'-taken_at',
+		// Äldst först, så att ett inlägg får sin första bilds plats (se refreshPost).
+		'taken_at',
 		limit,
 		0
 	);
