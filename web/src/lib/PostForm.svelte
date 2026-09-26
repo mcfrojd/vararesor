@@ -12,6 +12,7 @@
 	} from './offline.svelte';
 	import { photoUrl, type PreparedPhoto } from './photos';
 	import PhotoPicker from './PhotoPicker.svelte';
+	import { decodeFull, parsePlusCode, recoverNearest } from './pluscode';
 	import {
 		fieldErrors,
 		pb,
@@ -181,6 +182,52 @@
 	let busy = $state(false);
 
 	const config = $derived(kind ? (stayMode ? stayConfig : postKinds[kind]) : undefined);
+	/** Pluskoden som positionen senast kom från (visas under fältet). */
+	let fromPlusCode = $state('');
+	let resolving = $state(false);
+
+	/**
+	 * Pluskod i positionsfältet (t.ex. "X3V9+H4 Paralimni, Cypern") görs om till
+	 * lat, lon. Korta koder behöver orten, som servern slår upp. Sant om fältet
+	 * nu innehåller en position (eller var tomt), falskt vid fel.
+	 */
+	async function resolvePlusCode(): Promise<boolean> {
+		const pc = parsePlusCode(locationText);
+		if (!pc) return true;
+		resolving = true;
+		try {
+			let at;
+			if (pc.full) at = decodeFull(pc.code);
+			else {
+				if (!pc.place) {
+					errors = { location: 'Skriv orten efter koden, t.ex. "X3V9+H4 Paralimni".' };
+					return false;
+				}
+				const ref = await pb.send<{ lat: number; lon: number } | null>('/api/vararesor/place', {
+					query: { q: pc.place },
+					signal: timeout(),
+					requestKey: null
+				});
+				if (!ref) {
+					errors = { location: `Hittar inte orten "${pc.place}".` };
+					return false;
+				}
+				at = recoverNearest(pc.code, ref);
+			}
+			fromPlusCode = [pc.code, pc.place].filter(Boolean).join(' ');
+			locationText = formatLocation(at);
+			locationSource = 'manual';
+			locationFromChosen = false;
+			errors = {};
+			return true;
+		} catch {
+			errors = { location: 'Kunde inte slå upp orten. Pluskoder med ort kräver nät.' };
+			return false;
+		} finally {
+			resolving = false;
+		}
+	}
+
 	const mapsUrl = $derived.by(() => {
 		const at = locationText.trim() ? parseLocation(locationText) : null;
 		return at ? `https://www.google.com/maps/search/?api=1&query=${at.lat},${at.lon}` : '';
@@ -241,10 +288,11 @@
 		errors = {};
 
 		let location = { lat: 0, lon: 0 };
+		if (!(await resolvePlusCode())) return;
 		if (locationText.trim()) {
 			const parsed = parseLocation(locationText);
 			if (!parsed) {
-				errors = { location: 'Skriv position som "lat, lon", t.ex. 52.52, 13.405.' };
+				errors = { location: 'Skriv position som "lat, lon" (t.ex. 52.52, 13.405) eller en pluskod från Google Maps.' };
 				return;
 			}
 			location = parsed;
@@ -572,9 +620,11 @@
 							oninput={() => {
 								locationSource = 'manual';
 								locationFromChosen = false;
+								fromPlusCode = '';
 							}}
+							onblur={() => void resolvePlusCode()}
 							inputmode="decimal"
-							placeholder="Lägg till plats? (lat, lon)"
+							placeholder="lat, lon eller pluskod"
 							aria-label="Position"
 							class="{input} min-w-0"
 						/>
@@ -603,6 +653,11 @@
 						{/if}
 					</div>
 					{#if errors.location}<span class="text-sm text-red-600">{errors.location}</span>{/if}
+					{#if resolving}
+						<p class="text-xs text-muted">Slår upp pluskoden…</p>
+					{:else if fromPlusCode}
+						<p class="text-xs text-muted">Från pluskoden {fromPlusCode}.</p>
+					{/if}
 					{#if locationSource === 'track'}
 						<p class="text-xs text-muted">Från Doris GPS-spår. Ändra om ni var någon annanstans.</p>
 					{:else if locationSource === 'photo'}
