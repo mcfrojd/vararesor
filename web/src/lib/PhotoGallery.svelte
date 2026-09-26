@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import Icon from './Icon.svelte';
 	import { offline, type PendingPhoto } from './offline.svelte';
 	import type { Photo } from './pb';
@@ -7,13 +8,16 @@
 	let {
 		photos,
 		pending,
-		compact = false
+		compact = false,
+		actions
 	}: {
 		photos: Photo[];
 		/** Små miniatyrer i rader om fyra (t.ex. i dagsöversikten), i stället för stora bilder. */
 		compact?: boolean;
 		/** Vilka bilder i kön som hör hit (t.ex. samma inlägg, eller dagen). */
 		pending: (p: PendingPhoto) => boolean;
+		/** Knappar i visningen för den uppladdade bild som visas (t.ex. "Använd som omslag"). */
+		actions?: Snippet<[Photo]>;
 	} = $props();
 
 	interface Shown {
@@ -42,6 +46,10 @@
 
 	let open = $state<number | null>(null);
 	const current = $derived(open === null ? null : all[open]);
+	// Bilden försvann (t.ex. flyttad till en resa): visa den före, eller stäng.
+	$effect(() => {
+		if (open !== null && open >= all.length) open = all.length ? all.length - 1 : null;
+	});
 
 	function step(delta: number) {
 		if (open === null || all.length === 0) return;
@@ -117,6 +125,10 @@
 		<div class="flex items-center justify-between gap-3 p-3 text-sm text-white/80">
 			<span>{open + 1} / {all.length}{current.taken ? ` · ${current.taken.slice(11)}` : ''}</span>
 			<div class="flex items-center gap-2">
+				{#if actions && !current.pending}
+					{@const photo = photos.find((p) => p.id === current.id)}
+					{#if photo}{@render actions(photo)}{/if}
+				{/if}
 				{#if current.original}
 					<a href={current.original} target="_blank" rel="noopener" class={round} aria-label="Öppna originalet">
 						<Icon name="download" class="h-5 w-5" />

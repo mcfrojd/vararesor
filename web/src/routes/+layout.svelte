@@ -47,6 +47,7 @@
 	// Flikraden längst ner, som i Jorial.
 	const tabs: { href: string; label: string; icon: IconName; match: (p: string) => boolean }[] = [
 		{ href: '/', label: 'Resor', icon: 'journal', match: (p) => p === '/' || p.startsWith('/trips') },
+		{ href: '/bilder', label: 'Bilder', icon: 'image', match: (p) => p.startsWith('/bilder') },
 		{ href: '/kalender', label: 'Kalender', icon: 'calendar', match: (p) => p.startsWith('/kalender') },
 		{ href: '/karta', label: 'Karta', icon: 'map', match: (p) => p.startsWith('/karta') },
 		{ href: '/profil', label: 'Profil', icon: 'user', match: (p) => p.startsWith('/profil') }
@@ -103,7 +104,7 @@
 		style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom))"
 	>
 		<div
-			class="mx-auto grid max-w-md grid-cols-4 gap-1 rounded-3xl border border-line bg-card/90 p-1.5 shadow-card backdrop-blur-md"
+			class="mx-auto grid max-w-lg grid-cols-5 gap-0.5 rounded-3xl border border-line bg-card/90 p-1.5 shadow-card backdrop-blur-md"
 		>
 			{#each tabs as tab (tab.href)}
 				{@const active = tab.match(path)}

@@ -172,17 +172,20 @@ export interface PhotoToQueue {
 	photo: PreparedPhoto;
 	post: string;
 	day: string;
+	/** En annan resa än i `base`; tomt = okategoriserad. */
+	trip?: string;
 }
 
 export async function enqueuePhotos(items: PhotoToQueue[], base: Pick<PhotoData, 'trip' | 'author'>) {
 	const now = Date.now();
 	await db.photos.bulkPut(
-		items.map(({ photo: p, post, day }, i) => {
+		items.map(({ photo: p, post, day, trip }, i) => {
 			const id = newId();
 			return {
 				id,
 				data: {
 					...base,
+					trip: trip ?? base.trip,
 					id,
 					post,
 					day,

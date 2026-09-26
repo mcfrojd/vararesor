@@ -12,7 +12,7 @@ export async function load() {
 		// Bilder med egen position, eller vars inlägg har en.
 		pb.collection('photos').getFullList<Photo & { expand?: { post?: Post; trip?: Trip } }>({
 			filter:
-				'location.lat != 0 || location.lon != 0 || post.location.lat != 0 || post.location.lon != 0',
+				'trip != "" && (location.lat != 0 || location.lon != 0 || post.location.lat != 0 || post.location.lon != 0)',
 			sort: 'day,taken',
 			expand: 'post,trip'
 		})

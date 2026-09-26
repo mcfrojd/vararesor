@@ -1,5 +1,5 @@
 import { localTime } from './format';
-import type { GeoPoint, Photo, Post } from './pb';
+import type { GeoPoint, Photo, Post, Trip } from './pb';
 import type { PreparedPhoto } from './photos';
 import { hasLocation } from './posts';
 
@@ -91,4 +91,17 @@ export function isDuplicate(photo: PreparedPhoto, existing: Pick<Photo, 'taken_a
 			e.width === photo.width &&
 			e.height === photo.height
 	);
+}
+
+/**
+ * Resan en bild från `day` hör till: den med tidigast start av resorna med
+ * start- och slutdatum som omfattar dagen (samma regel som servern i
+ * pb_hooks/albums.js). Tom sträng = okategoriserad.
+ */
+export function tripForDay(day: string, trips: Pick<Trip, 'id' | 'start_date' | 'end_date'>[]): string {
+	if (!day) return '';
+	const fits = trips
+		.filter((t) => t.start_date && t.end_date && t.start_date.slice(0, 10) <= day && t.end_date.slice(0, 10) >= day)
+		.sort((a, b) => a.start_date.localeCompare(b.start_date));
+	return fits[0]?.id ?? '';
 }
