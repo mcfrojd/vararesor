@@ -251,9 +251,23 @@ docker compose exec vararesor /pb/pocketbase superuser upsert din@epost.se ett-l
 Gå sedan till `http://<server>:8090/_/` och:
 
 1. Skapa familjens konton under **users** (namn, e-post, lösenord, bocka i *verified*).
-2. **Settings → Files storage:** koppla S3 mot Synology.
-3. **Settings → Backups:** slå på schemalagd backup till S3.
-4. Sätt **Settings → Application URL** till den publika adressen.
+2. Sätt **Settings → Application URL** till den publika adressen.
+
+Fillagring och backup mot S3 ställs in i `.env` (se `.env.example`), inte i admin-gränssnittet: `pocketbase/pb_hooks/storage.pb.js` skriver in dem vid varje start.
+
+### S3 på Synology (Garage)
+
+Tre buckets, var och en med en egen nyckel som bara har läs/skriv på sin bucket (ingen `owner`, ingen webbåtkomst):
+
+| Bucket | Används av | Innehåll |
+|---|---|---|
+| `vararesor-media` | produktion | original och webp-versioner |
+| `vararesor-backup` | produktion | PocketBase-backup av databasen (varje natt, 14 sparas) |
+| `vararesor-test` | testmiljön | testbilder, kvot 20 GiB |
+
+Garage nås via Tailscale (`http://100.114.28.40:3900`, region `garage`, path-style). Bilderna visas alltid via PocketBase (`/api/files/…`), aldrig direkt från NAS:en.
+
+PocketBase-backupen innehåller **inte** filerna i S3, och Garage har ingen versionshantering. Skydda därför Garages datamapp på Synology med Btrfs-snapshots och Hyper Backup till extern disk eller moln, och sätt `metadata_auto_snapshot_interval = "6h"` i `garage.toml`.
 
 Appen nås på `http://<server>:8090/`. Lägg den bakom en reverse proxy med HTTPS (t.ex. Caddy, Nginx Proxy Manager eller Cloudflare Tunnel). PWA-installation och service worker kräver HTTPS.
 

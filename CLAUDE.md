@@ -40,6 +40,7 @@ Klart:
 - Tid på inlägg, startsida med pågående/kommande/tidigare resor, kalender (`/kalender`).
 - Väder per inlägg från Open-Meteo via `pocketbase/pb_hooks/weather.js` (hookar i `weather.pb.js`, timjobb `weather`). Hookar körs isolerat: delad kod via `require(`${__hooks}/weather.js`)`. Spara utan nya hookar med `app.unsafeWithoutHooks().save()`.
 - Utseende i stil med jorial.app: se klasserna i `web/src/app.css` (`card`, `field`, `label`, `chip`, `title`, `btn-*`) och komponenterna `Icon`, `Fab`, `BackLink`. Använd dem i stället för egna Tailwind-kombinationer.
+- S3 (Garage på Synology via Tailscale) för filer och backup, styrt av `.env` via `pocketbase/pb_hooks/storage.pb.js`. Testmiljön använder bucketen `vararesor-test` och ingen S3-backup; produktionens buckets är `vararesor-media` och `vararesor-backup`. Ändra aldrig S3 i admin-gränssnittet när `S3_ENDPOINT` är satt: det skrivs över vid omstart.
 - Offline: appen och lästa data cachas av service workern; nya inlägg köas i Dexie (`src/lib/offline.svelte.ts`) och skickas när nätet är tillbaka.
 
 Nästa steg: bilder med webp-skalning och S3 (väntar tills användaren är vid datorn). Publicering till husbilendoris.se väntar också.
