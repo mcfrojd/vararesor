@@ -40,7 +40,7 @@ Klart:
 - Tid på inlägg, startsida med pågående/kommande/tidigare resor, kalender (`/kalender`).
 - Väder per inlägg från Open-Meteo via `pocketbase/pb_hooks/weather.js` (hookar i `weather.pb.js`, timjobb `weather`). Hookar körs isolerat: delad kod via `require(`${__hooks}/weather.js`)`. Spara utan nya hookar med `app.unsafeWithoutHooks().save()`.
 - Utseende i stil med jorial.app: se klasserna i `web/src/app.css` (`card`, `field`, `label`, `chip`, `title`, `btn-*`) och komponenterna `Icon`, `Fab`, `BackLink`. Använd dem i stället för egna Tailwind-kombinationer.
-- S3 (Garage på Synology via Tailscale) för filer och backup, styrt av `.env` via `pocketbase/pb_hooks/storage.pb.js`. Testmiljön använder bucketen `vararesor-test` och ingen S3-backup; produktionens buckets är `vararesor-media` och `vararesor-backup`. Ändra aldrig S3 i admin-gränssnittet när `S3_ENDPOINT` är satt: det skrivs över vid omstart.
+- S3 (Garage på Synology via Tailscale) för filer och backup, styrt av `.env` via `pocketbase/pb_hooks/storage.pb.js`. Den riktiga appen (port 8090, `pb_data/`, `.env`) använder `vararesor-media` och `vararesor-backup`. Testmiljön (`docker-compose.test.yml`, port 8091, `pb_data_test/`, `.env.test`) använder `vararesor-test` och ingen S3-backup. Ändra aldrig S3 i admin-gränssnittet när `S3_ENDPOINT` är satt: det skrivs över vid omstart.
 - Bilder (`photos`): skalas till webp (`web` 1600 px, `thumb` 480 px) i mobilen i `src/lib/photos.ts`, med `@jsquash/webp` som reserv i Safari. EXIF läses med `exifr`. Laddas alltid upp via kön i `offline.svelte.ts` (små filer först, sedan originalet). Visas med `PhotoPicker`, `PhotoGallery`, på `PostCard` och på kartan. Hämtas med `expand: 'photos_via_post'` på inläggen. Bilder kan sakna inlägg (`post = ""`) och hör då bara till dagen ("Dagens bilder"). Många bilder på en gång: `/trips/[id]/photos`, sortering i `src/lib/photoMatch.ts`. `PostForm` låter en välja dagens bilder (prop `dayPhotos`) och fyller tid och plats från dem; flytten görs med `attachPhotos` (köas i Dexie-tabellen `moves` utan nät). Alla på resan får ändra `post` på andras bilder, inget annat.
 - Doris spår: kartan läser GPX (`tracks/gpx/…gpx`) och annars KML (`src/lib/tracks.ts`). Servern sätter position från spåret på bilder utan GPS och inlägg med tid men utan position, på husbilsresor (`pb_hooks/tracks.js`, hookar och timjobb `tracks` i `tracks.pb.js`). `location_source` visar varifrån positionen kommer; `manual` rörs aldrig.
 - Offline: appen och lästa data cachas av service workern; nya inlägg köas i Dexie (`src/lib/offline.svelte.ts`) och skickas när nätet är tillbaka.
@@ -49,7 +49,7 @@ Nästa steg: publicering till husbilendoris.se (väntar på användaren).
 
 **Säkerhet:** appen körs bara via Tailscale för två användare, så säkerheten är medvetet enkel (t.ex. är filer inte `protected`). Innan appen blir nåbar utan Tailscale måste säkerheten ses över rejält; se README, avsnittet Säkerhet. Påminn användaren om det om frågan om publik åtkomst kommer upp.
 
-Tips vid test: skapa en tillfällig superuser och testkonton `*@example.com`, och ta bort dem efteråt. MapLibre i headless Chromium behöver `--use-angle=swiftshader --enable-unsafe-swiftshader`. Offline testas med `context.setOffline(true)` efter att service workern tagit kontroll (`navigator.serviceWorker.controller`).
+**Testa aldrig mot den riktiga appen på 8090**; den har familjens data och produktionens bucket. Kör tester mot testmiljön på 8091 (`docker compose -f docker-compose.test.yml up -d --build` efter ändringar; `docker exec vararesor-test …` för superuser). Tips vid test: skapa en tillfällig superuser och testkonton `*@example.com`, och ta bort dem efteråt. MapLibre i headless Chromium behöver `--use-angle=swiftshader --enable-unsafe-swiftshader`. Offline testas med `context.setOffline(true)` efter att service workern tagit kontroll (`navigator.serviceWorker.controller`).
 
 ## Publicering till husbilendoris.se
 
@@ -62,4 +62,4 @@ Sajten är Hugo i det privata repot `hugo-mcfrojd/husbil` (Cloudflare Pages bygg
 
 ## Miljö
 
-Utvecklingen sker i en LXC på Proxmox (Debian/Ubuntu, Docker, Node 22, Tailscale). Appen testas från mobilen via `tailscale serve` (HTTPS krävs för PWA/service worker). Använd en separat testbucket på Synology.
+Utvecklingen sker i en LXC på Proxmox (Debian/Ubuntu, Docker, Node 22, Tailscale). Appen testas från mobilen via `tailscale serve` (HTTPS krävs för PWA/service worker). Tester körs mot testmiljön på port 8091 med testbucketen på Synology.

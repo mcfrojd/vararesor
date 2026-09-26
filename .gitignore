@@ -1,4 +1,7 @@
 .env
+.env.*
+!.env.example
 pb_data/
+pb_data_test/
 node_modules/
 testmedia/

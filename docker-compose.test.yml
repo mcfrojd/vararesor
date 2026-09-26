@@ -1,0 +1,17 @@
+# Testmiljö bredvid den riktiga: egen databas, egen testbucket, port 8091.
+#   docker compose -f docker-compose.test.yml up -d --build
+# Kräver .env.test (samma variabler som .env, men S3_MEDIA_BUCKET=vararesor-test
+# och ingen S3_BACKUP_*). Automatiska tester körs bara mot den här.
+name: vararesor-test
+services:
+  vararesor-test:
+    build: .
+    container_name: vararesor-test
+    restart: unless-stopped
+    ports:
+      - "${TEST_PORT:-8091}:8090"
+    env_file:
+      - path: .env.test
+        required: true
+    volumes:
+      - ./pb_data_test:/pb/pb_data

@@ -293,6 +293,14 @@ Tre buckets, var och en med en egen nyckel som bara har läs/skriv på sin bucke
 | `vararesor-backup` | produktion | PocketBase-backup av databasen (varje natt, 14 sparas) |
 | `vararesor-test` | testmiljön | testbilder, kvot 20 GiB |
 
+Den riktiga appen (`docker-compose.yml`, port 8090, `pb_data/`) läser `.env` och använder `vararesor-media` och `vararesor-backup`. Testmiljön körs bredvid med egen databas och testbucketen:
+
+```bash
+docker compose -f docker-compose.test.yml up -d --build   # port 8091, pb_data_test/, läser .env.test
+```
+
+Automatiska tester körs bara mot testmiljön, aldrig mot den riktiga appen.
+
 Garage nås via Tailscale (`http://100.114.28.40:3900`, region `garage`, path-style). Bilderna visas alltid via PocketBase (`/api/files/…`), aldrig direkt från NAS:en.
 
 PocketBase-backupen innehåller **inte** filerna i S3, och Garage har ingen versionshantering. Skydda därför Garages datamapp på Synology med Btrfs-snapshots och Hyper Backup till extern disk eller moln, och sätt `metadata_auto_snapshot_interval = "6h"` i `garage.toml`.
