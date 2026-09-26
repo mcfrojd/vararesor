@@ -18,19 +18,22 @@ export interface PreparedPhoto {
 	taken: string;
 	/** Tidpunkten i UTC (ISO), eller tomt. */
 	takenAt: string;
-	/** Från bildens GPS-data, eller null. */
+	/** Från bildens GPS-data, eller null (Android tar bort den; servern hämtar den från Immich). */
 	location: GeoPoint | null;
-	/**
-	 * Bilden har haft en plats som tagits bort (GPS-fälten finns men är tomma).
-	 * Android gör så med bilder som väljs med filväljaren; delas de från
-	 * Google Foto följer platsen med.
-	 */
-	locationRemoved: boolean;
 }
 
 /** Läser in bilden rättvänd (EXIF-orientering) och skalar den till webp i två storlekar. */
-export async function preparePhoto(file: File): Promise<PreparedPhoto> {
-	const [bitmap, meta] = await Promise.all([decode(file), readExif(file)]);
+export async function preparePhoto(picked: File): Promise<PreparedPhoto> {
+	let file = picked;
+	let bitmap: ImageBitmap;
+	try {
+		bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+	} catch {
+		// Går inte att läsa direkt: kopia i minnet och ett nytt försök (se readable).
+		file = await readable(picked);
+		bitmap = await decode(file);
+	}
+	const meta = await readExif(file);
 	try {
 		const web = scale(bitmap, WEB_SIZE);
 		const thumb = scale(web, THUMB_SIZE);
@@ -47,11 +50,37 @@ export async function preparePhoto(file: File): Promise<PreparedPhoto> {
 	}
 }
 
+/**
+ * Bilden som en kopia i minnet. Androids bildväljare lämnar ibland ut en fil
+ * som inte går att läsa direkt (storleken i väljaren stämmer inte med filen);
+ * kopian används då även när originalet laddas upp. Görs bara vid fel, så att
+ * många bilder på en gång inte fyller mobilens minne.
+ */
+async function readable(file: File): Promise<File> {
+	try {
+		const bytes = await file.arrayBuffer();
+		return new File([bytes], file.name, { type: file.type || 'image/jpeg', lastModified: file.lastModified });
+	} catch {
+		throw new Error(`Mobilen lämnade inte ut ${file.name}. Välj bilden igen, eller stäng appen helt och försök igen.`);
+	}
+}
+
 async function decode(file: File): Promise<ImageBitmap> {
 	try {
 		return await createImageBitmap(file, { imageOrientation: 'from-image' });
 	} catch {
-		throw new Error(`Kan inte läsa ${file.name}. Formatet stöds inte av webbläsaren.`);
+		// Reserv: via <img>, som klarar fler varianter i vissa webbläsare.
+		const url = URL.createObjectURL(file);
+		try {
+			const img = new Image();
+			img.src = url;
+			await img.decode();
+			return await createImageBitmap(img);
+		} catch {
+			throw new Error(`Kan inte läsa ${file.name}. Formatet stöds inte av webbläsaren.`);
+		} finally {
+			URL.revokeObjectURL(url);
+		}
 	}
 }
 
@@ -97,7 +126,7 @@ function forceWasm(): boolean {
  */
 async function readExif(
 	file: File
-): Promise<Pick<PreparedPhoto, 'taken' | 'takenAt' | 'location' | 'locationRemoved'>> {
+): Promise<Pick<PreparedPhoto, 'taken' | 'takenAt' | 'location'>> {
 	try {
 		const { default: exifr } = await import('exifr');
 		const [tags, gps] = await Promise.all([
@@ -110,23 +139,16 @@ async function readExif(
 				.catch(() => null),
 			exifr.gps(file).catch(() => null)
 		]);
-		const gpsBlock = hasGpsBlock(await exifr.parse(file, { gps: true, pick: ['GPSVersionID'] }).catch(() => null));
 		const lat = Number(gps?.latitude);
 		const lon = Number(gps?.longitude);
 		const location = Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
 		return {
 			...cameraTime(tags?.DateTimeOriginal ?? tags?.CreateDate, tags?.OffsetTimeOriginal ?? tags?.OffsetTime),
-			location: hasLocation(location) ? location : null,
-			locationRemoved: gpsBlock && !hasLocation(location)
+			location: hasLocation(location) ? location : null
 		};
 	} catch {
-		return { taken: '', takenAt: '', location: null, locationRemoved: false };
+		return { taken: '', takenAt: '', location: null };
 	}
-}
-
-/** Om bilden har ett GPS-block (kameran sparade plats), oavsett om det är tömt. */
-function hasGpsBlock(tags: Record<string, unknown> | null): boolean {
-	return !!tags && tags.GPSVersionID !== undefined;
 }
 
 /**

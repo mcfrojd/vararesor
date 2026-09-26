@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import LocationNotice from '$lib/LocationNotice.svelte';
 	import { auth } from '$lib/auth.svelte';
 	import BackLink from '$lib/BackLink.svelte';
 	import { dayNumber, formatDateRange, formatDay } from '$lib/format';
@@ -119,7 +118,6 @@
 
 	const ready = $derived(items.filter((it) => it.prepared && it.include));
 	const failed = $derived(items.filter((it) => it.error));
-	const withoutPlace = $derived(items.filter((it) => it.prepared?.locationRemoved).length);
 
 	// Grupperat per resa (resornas ordning), okategoriserade sist.
 	const groups = $derived.by(() => {
@@ -164,8 +162,6 @@
 	{items.length ? 'Välj fler bilder' : 'Välj bilder'}
 	<input type="file" accept="image/*" multiple onchange={pick} class="sr-only" />
 </label>
-
-<LocationNotice count={withoutPlace} />
 
 {#if preparing > 0}
 	<p class="mt-4 animate-pulse text-sm text-muted" role="status">Förbereder {preparing} bilder…</p>
