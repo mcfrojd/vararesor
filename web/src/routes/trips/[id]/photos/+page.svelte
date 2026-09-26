@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { auth } from '$lib/auth.svelte';
 	import BackLink from '$lib/BackLink.svelte';
+	import LocationNotice from '$lib/LocationNotice.svelte';
 	import { dayNumber, defaultDay, formatDay, tripDays } from '$lib/format';
 	import Icon from '$lib/Icon.svelte';
 	import { enqueuePhotos } from '$lib/offline.svelte';
@@ -85,6 +86,7 @@
 
 	const ready = $derived(items.filter((it) => it.prepared && it.include));
 	const failed = $derived(items.filter((it) => it.error));
+	const withoutPlace = $derived(items.filter((it) => it.prepared?.locationRemoved).length);
 	// Grupperat per dag, i tidsordning.
 	const groups = $derived.by(() => {
 		const byDay = new Map<string, Item[]>();
@@ -133,6 +135,8 @@
 	{items.length ? 'Välj fler bilder' : 'Välj bilder'}
 	<input type="file" accept="image/*" multiple onchange={pick} class="sr-only" />
 </label>
+
+<LocationNotice count={withoutPlace} />
 
 {#if preparing > 0}
 	<p class="mt-4 animate-pulse text-sm text-muted" role="status">Förbereder {preparing} bilder…</p>

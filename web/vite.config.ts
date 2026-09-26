@@ -26,6 +26,13 @@ export default defineConfig({
 				display: 'standalone',
 				background_color: '#faf8f5',
 				theme_color: '#2f5d50',
+				// "Dela" från mobilens galleri till appen (se static/share-target.js).
+				share_target: {
+					action: '/dela',
+					method: 'POST',
+					enctype: 'multipart/form-data',
+					params: { files: [{ name: 'bilder', accept: ['image/*'] }] }
+				},
 				icons: [
 					{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
 					{ src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -35,6 +42,8 @@ export default defineConfig({
 			workbox: {
 				// wasm = webp-kodaren som Safari behöver för att skala bilder, även utan nät.
 				globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2,wasm}'],
+				// Tar emot bilder som delas till appen (POST /dela).
+				importScripts: ['/share-target.js'],
 				navigateFallback: '/',
 				// PocketBase API och admin ska aldrig besvaras från cachen.
 				navigateFallbackDenylist: [/^\/api\//, /^\/_\//],

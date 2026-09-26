@@ -20,6 +20,12 @@ export interface PreparedPhoto {
 	takenAt: string;
 	/** Från bildens GPS-data, eller null. */
 	location: GeoPoint | null;
+	/**
+	 * Bilden har haft en plats som tagits bort (GPS-fälten finns men är tomma).
+	 * Android gör så med bilder som väljs med filväljaren; delas de från
+	 * Google Foto följer platsen med.
+	 */
+	locationRemoved: boolean;
 }
 
 /** Läser in bilden rättvänd (EXIF-orientering) och skalar den till webp i två storlekar. */
@@ -89,7 +95,9 @@ function forceWasm(): boolean {
  * uppladdning från webben; då kan servern ta den ur Doris spår i stället,
  * med hjälp av den exakta tidpunkten.
  */
-async function readExif(file: File): Promise<Pick<PreparedPhoto, 'taken' | 'takenAt' | 'location'>> {
+async function readExif(
+	file: File
+): Promise<Pick<PreparedPhoto, 'taken' | 'takenAt' | 'location' | 'locationRemoved'>> {
 	try {
 		const { default: exifr } = await import('exifr');
 		const [tags, gps] = await Promise.all([
@@ -102,16 +110,23 @@ async function readExif(file: File): Promise<Pick<PreparedPhoto, 'taken' | 'take
 				.catch(() => null),
 			exifr.gps(file).catch(() => null)
 		]);
+		const gpsBlock = hasGpsBlock(await exifr.parse(file, { gps: true, pick: ['GPSVersionID'] }).catch(() => null));
 		const lat = Number(gps?.latitude);
 		const lon = Number(gps?.longitude);
 		const location = Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
 		return {
 			...cameraTime(tags?.DateTimeOriginal ?? tags?.CreateDate, tags?.OffsetTimeOriginal ?? tags?.OffsetTime),
-			location: hasLocation(location) ? location : null
+			location: hasLocation(location) ? location : null,
+			locationRemoved: gpsBlock && !hasLocation(location)
 		};
 	} catch {
-		return { taken: '', takenAt: '', location: null };
+		return { taken: '', takenAt: '', location: null, locationRemoved: false };
 	}
+}
+
+/** Om bilden har ett GPS-block (kameran sparade plats), oavsett om det är tömt. */
+function hasGpsBlock(tags: Record<string, unknown> | null): boolean {
+	return !!tags && tags.GPSVersionID !== undefined;
 }
 
 /**

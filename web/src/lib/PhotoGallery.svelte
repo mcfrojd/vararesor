@@ -44,6 +44,8 @@
 		canSelect?: boolean;
 		/** Google Maps för bildens egen position (GPS eller Doris spår), annars tomt. */
 		maps: string;
+		/** Positionen är var Doris stod, inte bildens egen. */
+		fromTrack?: boolean;
 		photo?: Photo;
 	}
 
@@ -58,6 +60,7 @@
 			maps: hasLocation(p.location)
 				? `https://www.google.com/maps/search/?api=1&query=${p.location.lat},${p.location.lon}`
 				: '',
+			fromTrack: p.location_source === 'track',
 			photo: p,
 			thumb: photoUrl(p, 'thumb'),
 			web: photoUrl(p, 'web'),
@@ -173,11 +176,14 @@
 {#if current && open !== null}
 	<div class="fixed inset-0 z-50 flex flex-col bg-black" role="dialog" aria-modal="true" aria-label="Bild {open + 1} av {all.length}">
 		<div class="flex items-center justify-between gap-3 p-3 text-sm text-white/80">
-			<span>{open + 1} / {all.length}{current.taken ? ` · ${current.taken.slice(11)}` : ''}</span>
+			<span class="min-w-0">
+				{open + 1} / {all.length}{current.taken ? ` · ${current.taken.slice(11)}` : ''}
+				{#if current.fromTrack}<span class="block text-xs text-white/60">Plats från Doris spår</span>{/if}
+			</span>
 			<div class="flex items-center gap-2">
 				{#if actions && current.photo}{@render actions(current.photo)}{/if}
 				{#if current.maps}
-					<a href={current.maps} target="_blank" rel="noopener" class={round} aria-label="Visa platsen i Google Maps" title="Visa platsen i Google Maps">
+					<a href={current.maps} target="_blank" rel="noopener" class={round} aria-label="Visa platsen i Google Maps" title={current.fromTrack ? 'Visa i Google Maps (Doris position när bilden togs)' : 'Visa platsen i Google Maps'}>
 						<Icon name="map" class="h-5 w-5" />
 					</a>
 				{/if}

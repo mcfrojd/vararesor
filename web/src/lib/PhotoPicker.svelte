@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from './Icon.svelte';
+	import LocationNotice from './LocationNotice.svelte';
 	import { offline, removeQueuedPhoto } from './offline.svelte';
 	import type { GeoPoint, Photo } from './pb';
 	import { preparePhoto, photoUrl, sortPhotos, type PreparedPhoto } from './photos';
@@ -131,4 +132,5 @@
 			</label>
 		</li>
 	</ul>
+	<LocationNotice count={items.filter((it) => it.prepared?.locationRemoved).length} />
 </div>

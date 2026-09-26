@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import LocationNotice from '$lib/LocationNotice.svelte';
 	import { auth } from '$lib/auth.svelte';
 	import BackLink from '$lib/BackLink.svelte';
 	import { dayNumber, formatDateRange, formatDay } from '$lib/format';
@@ -57,6 +59,31 @@
 		const input = e.currentTarget as HTMLInputElement;
 		const files = [...(input.files ?? [])];
 		input.value = '';
+		await addFiles(files);
+	}
+
+	/** Bilder som delats till appen (Dela → Våra resor) ligger i service workerns cache. */
+	async function takeShared() {
+		if (!page.url.searchParams.has('delade') || !('caches' in window)) return;
+		const cache = await caches.open('delade-bilder');
+		const files: File[] = [];
+		for (const req of await cache.keys()) {
+			const res = await cache.match(req);
+			if (res) {
+				const name = decodeURIComponent(res.headers.get('x-filnamn') ?? 'bild.jpg');
+				files.push(new File([await res.blob()], name, { type: res.headers.get('content-type') ?? 'image/jpeg' }));
+			}
+			await cache.delete(req);
+		}
+		// Ta bort ?delade, så att en omladdning inte försöker igen.
+		history.replaceState(history.state, '', '/bilder/ladda-upp');
+		await addFiles(files);
+	}
+	$effect(() => {
+		void takeShared();
+	});
+
+	async function addFiles(files: File[]) {
 		const fresh: Item[] = files.map(() => ({ key: nextKey++, trip: '', day: '', post: '', reason: '', include: true }));
 		items = [...items, ...fresh];
 		preparing += files.length;
@@ -92,6 +119,7 @@
 
 	const ready = $derived(items.filter((it) => it.prepared && it.include));
 	const failed = $derived(items.filter((it) => it.error));
+	const withoutPlace = $derived(items.filter((it) => it.prepared?.locationRemoved).length);
 
 	// Grupperat per resa (resornas ordning), okategoriserade sist.
 	const groups = $derived.by(() => {
@@ -136,6 +164,8 @@
 	{items.length ? 'Välj fler bilder' : 'Välj bilder'}
 	<input type="file" accept="image/*" multiple onchange={pick} class="sr-only" />
 </label>
+
+<LocationNotice count={withoutPlace} />
 
 {#if preparing > 0}
 	<p class="mt-4 animate-pulse text-sm text-muted" role="status">Förbereder {preparing} bilder…</p>

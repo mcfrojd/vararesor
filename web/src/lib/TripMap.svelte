@@ -21,6 +21,8 @@
 	// MapLibre bygger sökvägen till sin worker dynamiskt, så Vite får inte med
 	// den av sig själv. ?worker&url buntar workern och ger oss dess adress.
 	import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+	import { tick } from 'svelte';
+	import Icon from './Icon.svelte';
 	import { postKinds } from './posts';
 	import type { Line } from './tracks';
 
@@ -40,6 +42,34 @@
 
 	let container: HTMLDivElement;
 	let map = $state<MapLibreMap | null>(null);
+
+	/**
+	 * Större karta: helskärm i mobilen (ett finger flyttar kartan, tillbaka-
+	 * knappen stänger), tre gånger så hög på större skärmar.
+	 */
+	let big = $state(false);
+	const phone = () => window.matchMedia('(max-width: 639px)').matches;
+	$effect(() => {
+		const m = map;
+		if (!m) return;
+		const fullscreen = big && phone();
+		tick().then(() => m.resize());
+		if (fullscreen) m.cooperativeGestures.disable();
+		else m.cooperativeGestures.enable();
+		if (!fullscreen) return;
+		history.pushState({ bigMap: true }, '');
+		const onpop = () => (big = false);
+		const onkey = (e: KeyboardEvent) => e.key === 'Escape' && (big = false);
+		window.addEventListener('popstate', onpop);
+		window.addEventListener('keydown', onkey);
+		document.body.style.overflow = 'hidden';
+		return () => {
+			window.removeEventListener('popstate', onpop);
+			window.removeEventListener('keydown', onkey);
+			document.body.style.overflow = '';
+			if (history.state?.bigMap) history.back();
+		};
+	});
 
 	// Gratis kartor från OpenFreeMap (OpenStreetMap-data), ingen API-nyckel.
 	const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -208,7 +238,26 @@
 	});
 </script>
 
-<div bind:this={container} class="{className} w-full overflow-hidden rounded-3xl border border-line bg-card shadow-soft"></div>
+<!-- Storlek och ram sitter här: kartans eget element får en fast class, eftersom
+     MapLibre lägger till egna klasser där som inte får skrivas över. -->
+<div
+	class="w-full overflow-hidden bg-card {big
+		? 'fixed inset-0 z-50 h-dvh sm:relative sm:inset-auto sm:z-auto sm:h-[min(54rem,85dvh)] sm:rounded-3xl sm:border sm:border-line sm:shadow-soft'
+		: `relative ${className} rounded-3xl border border-line shadow-soft`}"
+>
+	<div bind:this={container} class="h-full w-full"></div>
+	<button
+		type="button"
+		onclick={() => (big = !big)}
+		aria-pressed={big}
+		aria-label={big ? 'Mindre karta' : 'Större karta'}
+		title={big ? 'Mindre karta' : 'Större karta'}
+		class="absolute left-2.5 top-2.5 z-10 flex h-9 w-9 items-center justify-center rounded-xl bg-card text-ink shadow-md transition hover:text-rust"
+		style="top: max(0.625rem, env(safe-area-inset-top))"
+	>
+		<Icon name={big ? 'shrink' : 'expand'} class="h-4 w-4" />
+	</button>
+</div>
 
 <style>
 	/* Popupen följer appens färger i både ljust och mörkt läge. */
