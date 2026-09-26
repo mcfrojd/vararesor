@@ -41,9 +41,12 @@ Klart:
 - Väder per inlägg från Open-Meteo via `pocketbase/pb_hooks/weather.js` (hookar i `weather.pb.js`, timjobb `weather`). Hookar körs isolerat: delad kod via `require(`${__hooks}/weather.js`)`. Spara utan nya hookar med `app.unsafeWithoutHooks().save()`.
 - Utseende i stil med jorial.app: se klasserna i `web/src/app.css` (`card`, `field`, `label`, `chip`, `title`, `btn-*`) och komponenterna `Icon`, `Fab`, `BackLink`. Använd dem i stället för egna Tailwind-kombinationer.
 - S3 (Garage på Synology via Tailscale) för filer och backup, styrt av `.env` via `pocketbase/pb_hooks/storage.pb.js`. Testmiljön använder bucketen `vararesor-test` och ingen S3-backup; produktionens buckets är `vararesor-media` och `vararesor-backup`. Ändra aldrig S3 i admin-gränssnittet när `S3_ENDPOINT` är satt: det skrivs över vid omstart.
+- Bilder (`photos`): skalas till webp (`web` 1600 px, `thumb` 480 px) i mobilen i `src/lib/photos.ts`, med `@jsquash/webp` som reserv i Safari. EXIF läses med `exifr`. Laddas alltid upp via kön i `offline.svelte.ts` (små filer först, sedan originalet). Visas med `PhotoPicker`, `PhotoGallery`, på `PostCard` och på kartan. Hämtas med `expand: 'photos_via_post'` på inläggen.
 - Offline: appen och lästa data cachas av service workern; nya inlägg köas i Dexie (`src/lib/offline.svelte.ts`) och skickas när nätet är tillbaka.
 
-Nästa steg: bilder med webp-skalning och S3 (väntar tills användaren är vid datorn). Publicering till husbilendoris.se väntar också.
+Nästa steg: publicering till husbilendoris.se (väntar på användaren).
+
+**Säkerhet:** appen körs bara via Tailscale för två användare, så säkerheten är medvetet enkel (t.ex. är filer inte `protected`). Innan appen blir nåbar utan Tailscale måste säkerheten ses över rejält; se README, avsnittet Säkerhet. Påminn användaren om det om frågan om publik åtkomst kommer upp.
 
 Tips vid test: skapa en tillfällig superuser och testkonton `*@example.com`, och ta bort dem efteråt. MapLibre i headless Chromium behöver `--use-angle=swiftshader --enable-unsafe-swiftshader`. Offline testas med `context.setOffline(true)` efter att service workern tagit kontroll (`navigator.serviceWorker.controller`).
 

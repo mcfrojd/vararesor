@@ -64,7 +64,30 @@ export interface Post {
 	created: string;
 	expand?: {
 		author?: User;
+		/** Inläggets bilder (bakåtrelation), när de hämtats med expand. */
+		photos_via_post?: Photo[];
 	};
+}
+
+export interface Photo {
+	id: string;
+	collectionId: string;
+	collectionName: string;
+	trip: string;
+	post: string;
+	author: string;
+	day: string;
+	/** När bilden togs, "ÅÅÅÅ-MM-DD TT:MM", om kameran sparat det. */
+	taken: string;
+	/** Från bildens GPS-data; 0,0 om den saknas. */
+	location: GeoPoint;
+	width: number;
+	height: number;
+	/** Tomt tills originalet laddats upp. */
+	original: string;
+	web: string;
+	thumb: string;
+	created: string;
 }
 
 export interface User {

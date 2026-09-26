@@ -11,6 +11,7 @@
 	import WeatherPill from '$lib/WeatherPill.svelte';
 	import BackLink from '$lib/BackLink.svelte';
 	import Icon from '$lib/Icon.svelte';
+	import PhotoGallery from '$lib/PhotoGallery.svelte';
 
 	let { data } = $props();
 
@@ -38,7 +39,8 @@
 	let error = $state('');
 
 	async function remove() {
-		if (!confirm('Ta bort inlägget? Det går inte att ångra.')) return;
+		const n = post.expand?.photos_via_post?.length ?? 0;
+		if (!confirm(`Ta bort inlägget${n ? ` och dess ${n} bilder` : ''}? Det går inte att ångra.`)) return;
 		try {
 			await pb.collection('posts').delete(post.id);
 			goto(`/trips/${trip.id}`, { replaceState: true });
@@ -82,6 +84,8 @@
 			{/if}
 		</div>
 	</div>
+
+	<PhotoGallery photos={post.expand?.photos_via_post ?? []} postId={post.id} />
 
 	{#if post.body}<p class="whitespace-pre-line text-[17px] leading-relaxed">{post.body}</p>{/if}
 

@@ -1,11 +1,12 @@
 import { daysBefore, today, toDateInput } from './format';
-import type { Post, PostKind } from './pb';
+import type { Photo, Post, PostKind } from './pb';
 
 export type RangePreset = 'all' | '3' | '7' | '30' | 'custom';
 
 export interface MapFilter {
 	kinds: PostKind[];
 	tracks: boolean;
+	photos: boolean;
 	range: RangePreset;
 	/** Bara för range = 'custom'. ÅÅÅÅ-MM-DD, tomt = öppet. */
 	from: string;
@@ -21,7 +22,14 @@ export const rangePresets: { value: RangePreset; label: string }[] = [
 ];
 
 export function defaultFilter(): MapFilter {
-	return { kinds: ['overnight', 'food', 'sight', 'note'], tracks: true, range: 'all', from: '', to: '' };
+	return {
+		kinds: ['overnight', 'food', 'sight', 'note'],
+		tracks: true,
+		photos: true,
+		range: 'all',
+		from: '',
+		to: ''
+	};
 }
 
 /** Filtrets datumintervall. "3 dagar" = i dag och de två dagarna före. */
@@ -39,6 +47,12 @@ export function inRange(day: string, r: { from: string; to: string }): boolean {
 export function filterPosts<T extends Post>(posts: T[], f: MapFilter): T[] {
 	const r = filterRange(f);
 	return posts.filter((p) => f.kinds.includes(p.kind) && inRange(p.day, r));
+}
+
+/** Bilderna inom perioden (alla, oavsett om de visas), för siffran på knappen. */
+export function photosInRange<T extends Pick<Photo, 'day'>>(photos: T[], f: MapFilter): T[] {
+	const r = filterRange(f);
+	return photos.filter((p) => inRange(p.day, r));
 }
 
 /** Antal inlägg per typ inom datumintervallet (för siffrorna på knapparna). */

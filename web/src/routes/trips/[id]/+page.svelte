@@ -6,8 +6,15 @@
 	import { pb, type Post } from '$lib/pb';
 	import PostCard from '$lib/PostCard.svelte';
 	import MapFilter from '$lib/MapFilter.svelte';
-	import { countByKind, defaultFilter, filterPosts, filterRange, inRange } from '$lib/mapFilter';
-	import { hasLocation, mapPoints, sortPosts } from '$lib/posts';
+	import {
+		countByKind,
+		defaultFilter,
+		filterPosts,
+		filterRange,
+		inRange,
+		photosInRange
+	} from '$lib/mapFilter';
+	import { hasLocation, mapPoints, photoLocation, photoPoints, sortPosts } from '$lib/posts';
 	import { loadDorisTracks, type Line } from '$lib/tracks';
 	import TripMap from '$lib/TripMap.svelte';
 	import { dayWeather, tempRange, weatherInfo } from '$lib/weather';
@@ -37,7 +44,7 @@
 				collectionId: '',
 				collectionName: 'posts',
 				created: q.queuedAt.replace('T', ' '),
-				expand: auth.user ? { author: auth.user } : undefined
+				expand: (auth.user ? { author: auth.user } : undefined) as Post['expand']
 			}))
 		])
 	);
@@ -59,7 +66,17 @@
 	// Kartan: filter för typ, period och spår. Sparas inte; varje resa börjar med allt.
 	let filter = $state(defaultFilter());
 	const located = $derived(allPosts.filter((p) => hasLocation(p.location)));
-	const points = $derived(mapPoints(filterPosts(located, filter), trip.start_date));
+	const postById = $derived(Object.fromEntries(allPosts.map((p) => [p.id, p])));
+	const locatedPhotos = $derived(
+		allPosts
+			.flatMap((p) => p.expand?.photos_via_post ?? [])
+			.filter((ph) => photoLocation(ph, postById[ph.post]))
+	);
+	const photosShown = $derived(photosInRange(locatedPhotos, filter));
+	const points = $derived([
+		...mapPoints(filterPosts(located, filter), trip.start_date),
+		...(filter.photos ? photoPoints(photosShown, (ph) => postById[ph.post], () => trip) : [])
+	]);
 	const counts = $derived(countByKind(located, filter));
 
 	// Husbilsresor: hämta Doris körda spår för alla dagar som varit, en gång.
@@ -125,18 +142,18 @@
 	</div>
 </article>
 
-{#if located.length > 0 || hasTracks}
+{#if located.length > 0 || locatedPhotos.length > 0 || hasTracks}
 	<section class="mt-10">
 		<h2 class="title mb-3 text-3xl">Karta</h2>
 		<div class="mb-3">
-			<MapFilter bind:filter {counts} tracksAvailable={hasTracks} />
+			<MapFilter bind:filter {counts} photoCount={photosShown.length} tracksAvailable={hasTracks} />
 		</div>
 		<TripMap {points} {tracks} connect={tracks.length === 0} />
 		{#if points.length === 0 && tracks.length === 0}
 			<p class="mt-2 text-sm text-muted">Inget att visa med det här filtret.</p>
 		{:else if tracks.length > 0}
 			<p class="mt-2 text-xs text-muted">Heldragen linje: Doris körda spår.</p>
-		{:else if points.length > 1}
+		{:else if points.filter((p) => p.kind !== 'photo').length > 1}
 			<p class="mt-2 text-xs text-muted">Streckad linje: ungefärlig rutt mellan inläggen.</p>
 		{/if}
 	</section>

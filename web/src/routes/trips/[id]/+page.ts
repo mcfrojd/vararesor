@@ -9,7 +9,7 @@ export async function load({ params }) {
 			pb.collection('posts').getFullList<Post>({
 				filter: pb.filter('trip = {:trip}', { trip: params.id }),
 				sort: 'day,created',
-				expand: 'author'
+				expand: 'author,photos_via_post'
 			})
 		]);
 		return { trip, posts: sortPosts(posts) };

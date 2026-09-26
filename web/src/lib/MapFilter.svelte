@@ -6,10 +6,13 @@
 	let {
 		filter = $bindable(),
 		counts,
+		photoCount = 0,
 		tracksAvailable = false
 	}: {
 		filter: MapFilter;
 		counts: Record<PostKind, number>;
+		/** Bilder med position inom perioden. Knappen visas bara om det finns några. */
+		photoCount?: number;
 		/** Visa knappen för GPS-spår (bara när det finns spår att visa). */
 		tracksAvailable?: boolean;
 	} = $props();
@@ -50,6 +53,17 @@
 				<span class="text-xs text-muted">{counts[k]}</span>
 			</button>
 		{/each}
+		{#if photoCount > 0}
+			<button
+				type="button"
+				aria-pressed={filter.photos}
+				onclick={() => (filter.photos = !filter.photos)}
+				class="chip"
+			>
+				📷 Bilder
+				<span class="text-xs text-muted">{photoCount}</span>
+			</button>
+		{/if}
 		{#if tracksAvailable}
 			<button
 				type="button"

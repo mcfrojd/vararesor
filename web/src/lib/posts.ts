@@ -1,5 +1,6 @@
 import { dayNumber, formatDay, localTime } from './format';
-import type { GeoPoint, Post, PostKind } from './pb';
+import type { GeoPoint, Photo, Post, PostKind, Trip } from './pb';
+import { photoUrl } from './photos';
 import type { MapPoint } from './TripMap.svelte';
 
 export interface KindConfig {
@@ -89,6 +90,49 @@ export function parseLocation(text: string): GeoPoint | null {
 
 export function mapUrl(p: GeoPoint): string {
 	return `https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lon}#map=16/${p.lat}/${p.lon}`;
+}
+
+/** Bildens position: från kameran, annars inläggets. */
+export function photoLocation(photo: Photo, post?: Post): GeoPoint | null {
+	if (hasLocation(photo.location)) return photo.location;
+	return hasLocation(post?.location) ? post.location : null;
+}
+
+/**
+ * Bilder som punkter för kartan. Bilder från samma inlägg och ungefär samma
+ * plats blir en punkt (med antal), så att kartan inte fylls av staplade bilder.
+ */
+export function photoPoints<T extends Photo>(
+	photos: T[],
+	postOf: (p: T) => Post | undefined,
+	tripOf: (p: T) => Pick<Trip, 'start_date' | 'title'> | undefined
+): MapPoint[] {
+	const groups = new Map<string, MapPoint>();
+	for (const photo of photos) {
+		const post = postOf(photo);
+		const at = photoLocation(photo, post);
+		if (!at) continue;
+		const key = `${photo.post} ${at.lat.toFixed(4)} ${at.lon.toFixed(4)}`;
+		const existing = groups.get(key);
+		if (existing) {
+			existing.count = (existing.count ?? 1) + 1;
+			continue;
+		}
+		const trip = tripOf(photo);
+		const n = trip ? dayNumber(trip.start_date, photo.day) : 0;
+		groups.set(key, {
+			id: `photo-${photo.id}`,
+			lat: at.lat,
+			lon: at.lon,
+			kind: 'photo',
+			title: post ? post.title || postKinds[post.kind].label : 'Bild',
+			subtitle: [trip?.title, n ? `Dag ${n}` : '', formatDay(photo.day)].filter(Boolean).join(' · '),
+			href: `/trips/${photo.trip}/posts/${photo.post}`,
+			thumb: photoUrl(photo, 'thumb'),
+			count: 1
+		});
+	}
+	return [...groups.values()];
 }
 
 /** Inläggen som har position, som punkter för kartan (i ordning). */

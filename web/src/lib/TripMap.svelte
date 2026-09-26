@@ -5,10 +5,13 @@
 		id: string;
 		lat: number;
 		lon: number;
-		kind: PostKind;
+		kind: PostKind | 'photo';
 		title: string;
 		subtitle: string;
 		href: string;
+		/** Bilder: miniatyr som markör, och hur många bilder punkten står för. */
+		thumb?: string;
+		count?: number;
 	}
 </script>
 
@@ -74,10 +77,27 @@
 	function markerElement(p: MapPoint): HTMLElement {
 		const el = document.createElement('button');
 		el.type = 'button';
+		el.setAttribute('aria-label', p.title);
+		if (p.thumb) {
+			el.className =
+				'relative h-11 w-11 rounded-xl border-2 border-white bg-card shadow-md transition hover:scale-110';
+			const img = document.createElement('img');
+			img.src = p.thumb;
+			img.alt = '';
+			img.className = 'h-full w-full rounded-[10px] object-cover';
+			el.append(img);
+			if ((p.count ?? 1) > 1) {
+				const badge = document.createElement('span');
+				badge.className =
+					'absolute -right-2 -top-2 min-w-5 rounded-full bg-rust px-1 text-center text-[11px] font-bold leading-5 text-white';
+				badge.textContent = String(p.count);
+				el.append(badge);
+			}
+			return el;
+		}
 		el.className =
 			'flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-card text-lg shadow-md transition hover:scale-110';
-		el.textContent = postKinds[p.kind].icon;
-		el.setAttribute('aria-label', p.title);
+		el.textContent = p.kind === 'photo' ? '📷' : postKinds[p.kind].icon;
 		return el;
 	}
 
@@ -91,6 +111,14 @@
 		const sub = document.createElement('span');
 		sub.className = 'block text-xs text-muted';
 		sub.textContent = p.subtitle;
+		if (p.thumb) {
+			const img = document.createElement('img');
+			img.src = p.thumb;
+			img.alt = '';
+			img.className = 'mb-1.5 h-24 w-36 rounded-lg object-cover';
+			a.append(img);
+			if ((p.count ?? 1) > 1) sub.textContent += ` · ${p.count} bilder`;
+		}
 		a.append(title, sub);
 		return a;
 	}
@@ -112,14 +140,14 @@
 				properties: { dashed: false },
 				geometry: { type: 'LineString' as const, coordinates }
 			})),
-			...(dashed && pts.length > 1
+			...(dashed && pts.filter((p) => p.kind !== 'photo').length > 1
 				? [
 						{
 							type: 'Feature' as const,
 							properties: { dashed: true },
 							geometry: {
 								type: 'LineString' as const,
-								coordinates: pts.map((p) => [p.lon, p.lat])
+								coordinates: pts.filter((p) => p.kind !== 'photo').map((p) => [p.lon, p.lat])
 							}
 						}
 					]
@@ -146,7 +174,8 @@
 		import('maplibre-gl').then(({ Marker, Popup, LngLatBounds }) => {
 			if (cancelled) return;
 			markers = pts.map((p) =>
-				new Marker({ element: markerElement(p) })
+				// Bilder snett ovanför, så att inläggets ikon på samma plats syns.
+				new Marker({ element: markerElement(p), offset: p.thumb ? [18, -18] : [0, 0] })
 					.setLngLat([p.lon, p.lat])
 					.setPopup(new Popup({ offset: 22, closeButton: false }).setDOMContent(popupContent(p)))
 					.addTo(m)

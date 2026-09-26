@@ -5,7 +5,7 @@
 	import { auth } from '$lib/auth.svelte';
 	import Avatar from '$lib/Avatar.svelte';
 	import Icon, { type IconName } from '$lib/Icon.svelte';
-	import { offline, startSync } from '$lib/offline.svelte';
+	import { offline, startSync, waitingLabel } from '$lib/offline.svelte';
 	import { registerSW } from 'virtual:pwa-register';
 
 	let { children } = $props();
@@ -23,7 +23,7 @@
 		if (auth.user) startSync();
 	});
 
-	const waiting = $derived(offline.queue.length);
+	const waiting = $derived(waitingLabel());
 
 	$effect(() => {
 		if (!auth.user && !isLogin) goto('/login', { replaceState: true });
@@ -55,7 +55,7 @@
 				<Avatar user={auth.user} size="h-8 w-8 text-[10px]" />
 			</a>
 		</div>
-		{#if !offline.online || waiting > 0}
+		{#if !offline.online || waiting}
 			<div
 				role="status"
 				class="mx-auto mt-2 flex max-w-3xl items-center justify-center gap-2 rounded-full px-4 py-1.5 text-center text-sm font-medium {offline.online
@@ -66,14 +66,14 @@
 					<Icon name="cloudOff" class="h-4 w-4 shrink-0" />
 					<span>
 						Ingen uppkoppling.
-						{waiting > 0
-							? `${waiting} inlägg väntar och skickas när nätet är tillbaka.`
+						{waiting
+							? `${waiting} väntar och skickas när nätet är tillbaka.`
 							: 'Nya inlägg sparas på telefonen tills nätet är tillbaka.'}
 					</span>
 				{:else if offline.syncing}
-					Skickar {waiting} inlägg…
+					Skickar {waiting}…
 				{:else}
-					{waiting} inlägg väntar på att skickas.
+					{waiting} väntar på att skickas.
 				{/if}
 			</div>
 		{/if}

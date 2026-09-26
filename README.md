@@ -2,7 +2,7 @@
 
 En enkel och stilren resedagbok för familjen, byggd som en **PWA** (Progressive Web App).
 
-> Status: tidigt skede (inloggning, resor, dagar och inlägg med mallar, karta, kalender, väder, offline). Bilder kommer härnäst. Dokumentet beskriver vad appen ska bli och fylls på efter hand.
+> Status: tidigt skede (inloggning, resor, dagar och inlägg med mallar, bilder, karta, kalender, väder, offline). Publicering till husbilendoris.se kommer härnäst. Dokumentet beskriver vad appen ska bli och fylls på efter hand.
 
 ---
 
@@ -155,6 +155,17 @@ Därefter kommer dagens text, Instagram-rutan, galleriet och GPS-spåret:
 - Appen skapar automatiskt **webbanpassade versioner** i `.webp`, samma som sajten använder idag: galleribilder ca 800 px breda och en omslagsbild (`cover.webp`) ca 2600×1040.
 - Originalen sparas alltid orörda.
 
+Så fungerar det i appen nu:
+
+- **Lägga till:** i formuläret för inlägg, under "Bilder". Man kan välja flera bilder på en gång, från kameran eller biblioteket.
+- **I mobilen** läses bilden in rättvänd och skalas till två webp-filer: `web` (längsta sida 1600 px, för att visa i appen) och `thumb` (480 px, för listor och kartan). Chrome och Firefox skapar webp själva; Safari kan inte, så där används en webp-kodare i WebAssembly (`@jsquash/webp`), som följer med appen och fungerar offline.
+- **EXIF:** tid och GPS läses ur bilden (`exifr`). Har inlägget ingen position föreslås bildens. Saknar bilden GPS (många mobiler tar bort den vid uppladdning från webben) används inläggets position på kartan.
+- **Uppladdning** går alltid via kön på enheten, i två steg: först de små webp-filerna (bilden syns direkt), sedan originalet. Utan nät väntar bilderna i kön; de skickas efter sitt inlägg.
+- **Visa:** miniatyrer på inläggskorten, galleri på inlägget med helskärm (svep, piltangenter, tillbaka-knappen stänger) och länk till originalet. På kartan visas bilderna som miniatyrer, grupperade per inlägg och plats, med ett eget filter.
+- **Offline:** miniatyrer och webbilder som visats cachas; originalen cachas inte.
+
+Webbversionerna för husbilendoris.se (800 px och `cover.webp`) skapas vid publiceringen, från originalen.
+
 ## 8. Teknik
 
 | Del | Val |
@@ -197,6 +208,7 @@ vararesor/
 |------------|----------|
 | `users` | Familjens konton (`name`, `email`, `avatar`). Egen registrering är avstängd; konton skapas i admin. Inloggade ser varandras namn och avatar (för att kunna välja deltagare), men e-post syns bara för en själv. |
 | `trips` | Resor: `title`, `type` (`husbil` / `semester` / `egen`), `start_date`, `end_date`, `description`, `cover`, `owner`, `participants`. Syns bara för ägaren och deltagarna. Bara ägaren kan ändra och ta bort. |
+| `photos` | Bilder: `trip`, `post`, `author`, `day`, `taken` (ÅÅÅÅ-MM-DD TT:MM enligt kameran), `location` (geoPoint från EXIF, annars 0,0), `width`, `height`, `original` (orört, upp till 60 MB), `web` och `thumb` (webp). Samma behörighet som inläggen; bara den som laddat upp ändrar. Tas bort med inlägget och resan. |
 | `posts` | Inlägg: `trip`, `author`, `kind` (`overnight` / `food` / `sight` / `note`), `day`, `time` (valfri, TT:MM; utan tid sorteras inlägget efter när det skapades), `title`, `category`, `body`, `rating` (0–5), `price`, `location` (geoPoint), `weather` (JSON, sätts av servern), `details` (JSON med mallens egna fält: faciliteter, betalsätt, underlag, utsikt, ljudnivå, vad vi åt, öppettider). Syns för resans ägare och deltagare, som också kan skriva. Bara författaren ändrar; författaren eller resans ägare kan ta bort. Tas bort med resan. |
 
 ### Karta
@@ -205,7 +217,7 @@ vararesor/
 - **Inlägg:** liten karta över platsen, plus länk till OpenStreetMap.
 - **/karta:** alla platser från alla resor man har tillgång till.
 
-- **Filter** (på resans karta och /karta): välj typer av inlägg (övernattning, mat, sevärt, anteckningar), GPS-spår av/på, och period: allt, senaste 3 dagarna, veckan, månaden eller valfria datum. Perioden gäller inläggens dag. Knapparna visar antal inom perioden. /karta kommer ihåg filtret på enheten. Filter för bilder kommer med bilduppladdningen.
+- **Filter** (på resans karta och /karta): välj typer av inlägg (övernattning, mat, sevärt, anteckningar), GPS-spår av/på, och period: allt, senaste 3 dagarna, veckan, månaden eller valfria datum. Bilder av/på. Perioden gäller inläggens och bildernas dag. Knapparna visar antal inom perioden. /karta kommer ihåg filtret på enheten.
 - **Spår på /karta:** för husbilsresornas dagar inom perioden, högst de 60 senaste dagarna åt gången.
 
 Kartbilderna hämtas från OpenFreeMap och sparas inte offline än.
@@ -213,6 +225,7 @@ Kartbilderna hämtas från OpenFreeMap och sparas inte offline än.
 ### Offline
 
 - **Läsa:** appen startar utan nät. Resor, inlägg och bilder man redan öppnat visas från cachen (nätet går först, cachen används när det inte svarar inom 6 s).
+- **Bilder:** väntar i kön med sina filer och skickas efter inlägget (se avsnitt 7).
 - **Skriva:** nya inlägg utan nät (eller när anropet inte kommer fram) läggs i en kö på enheten och visas streckade med "Väntar på nät". Kön skickas när nätet kommer tillbaka och var 30:e sekund. Inlägget får sitt id i appen, så ett nytt försök skapar aldrig dubbletter.
 - **Inte offline än:** ändra eller ta bort befintliga inlägg, skapa resor, kartbilder.
 - **Utloggning** tömmer kön och cachen på enheten, och varnar om något inte skickats.
@@ -228,6 +241,17 @@ Vädret visas som en pastill på inlägget och i dagens rubrik (från första in
 `/kalender` visar en månad i taget, med början på måndag. Dagar under en resa är markerade och visar ikoner för dagens inlägg och väder. Tryck på en dag för att se inläggen och lägga till nya på resan den dagen. Vald dag och månad ligger i adressen.
 
 Dagarna räknas fram ur resans datum (dag 1 = startdatum) och inläggens `day`; det finns ingen egen tabell för dagar än. Den kommer med publiceringen, där varje dag behöver egen status, sammanfattning och commit.
+
+### Säkerhet
+
+Appen nås i dag bara via Tailscale och används av två personer, så säkerheten är medvetet enkel. **Innan appen görs nåbar utan Tailscale (publik adress, Cloudflare Tunnel eller liknande) måste säkerheten ses över ordentligt**, bland annat:
+
+- Filer är inte skyddade: den som har en fil-länk (omslag, bilder, original) kan se filen utan att vara inloggad. Gör fälten `protected` och använd fil-token i appen.
+- Begränsa inloggningsförsök (rate limit) och överväg MFA/OTP i PocketBase.
+- Admin-gränssnittet `/_/` ska inte vara nåbart utifrån.
+- Säkra PocketBase-inställningar: Application URL, betrodda proxy-huvuden (för rätt IP i loggar och rate limit), CORS.
+- Gå igenom API-reglerna för alla collections, t.ex. att deltagare bara ser det de ska.
+- Kör en säkerhetsgranskning av koden och beroendena.
 
 ## 9. Kom igång
 
@@ -302,6 +326,6 @@ npm run dev                          # appen på :5173, /api skickas vidare till
 2. ~~Skelett med PocketBase + SvelteKit i Docker, inloggning och resa-lista.~~
 3. ~~Skapa och redigera resor (inklusive omslagsbild och deltagare).~~
 4. ~~Dagar och inlägg med mallar (övernattning, mat och dryck, sevärdhet, fri anteckning).~~
-5. Bilduppladdning med `.webp`-skalning och S3 mot Synology.
+5. ~~Bilduppladdning med `.webp`-skalning och S3 mot Synology.~~
 6. Dagssammanfattning och publicering till husbilendoris.se.
 7. ~~Offline-kö. Karta.~~

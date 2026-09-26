@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { auth } from './auth.svelte';
 	import { nowTime, today, toDateInput } from './format';
-	import { enqueue, isNetworkError, newId, timeout } from './offline.svelte';
+	import { enqueue, enqueuePhotos, isNetworkError, newId, timeout } from './offline.svelte';
+	import type { PreparedPhoto } from './photos';
+	import PhotoPicker from './PhotoPicker.svelte';
 	import { fieldErrors, pb, type Post, type PostDetails, type PostKind } from './pb';
 	import {
 		facilities,
@@ -49,6 +51,13 @@
 	let price = $state(initial?.price ?? '');
 	let locationText = $state(hasLocation(initial?.location) ? formatLocation(initial.location) : '');
 	let details = $state<PostDetails>({ facilities: [], ...(initial?.details ?? {}) });
+
+	// Id för ett nytt inlägg bestäms en gång, så att ett nytt försök efter ett fel
+	// inte skapar en dubblett.
+	const newPostId = newId();
+	let addedPhotos = $state.raw<PreparedPhoto[]>([]);
+	let removedPhotos = $state<string[]>([]);
+	let preparing = $state(false);
 
 	let locating = $state(false);
 	let errors = $state<Record<string, string>>({});
@@ -129,23 +138,45 @@
 		};
 
 		busy = true;
+		/** Nya bilder går alltid via kön; de laddas upp i bakgrunden. */
+		const savePhotos = (postId: string) =>
+			addedPhotos.length === 0
+				? Promise.resolve()
+				: enqueuePhotos(
+						addedPhotos,
+						{ trip: tripId, post: postId, author: auth.user?.id ?? '', day },
+						hasLocation(location) ? location : null
+					);
 		try {
 			if (initial) {
-				onsaved(await pb.collection('posts').update<Post>(initial.id, data, { signal: timeout() }));
+				const saved = await pb.collection('posts').update<Post>(initial.id, data, { signal: timeout() });
+				for (const id of removedPhotos) await pb.collection('photos').delete(id, { signal: timeout() });
+				await savePhotos(saved.id);
+				onsaved(saved);
 				return;
 			}
 			// Nytt inlägg: id:t sätts här, så att det kan köas och skickas om utan dubbletter.
-			const record = { ...data, id: newId(), trip: tripId, author: auth.user?.id ?? '' };
+			const record = { ...data, id: newPostId, trip: tripId, author: auth.user?.id ?? '' };
 			if (!navigator.onLine) {
 				await enqueue(record);
+				await savePhotos(record.id);
 				onsaved(record, true);
 				return;
 			}
 			try {
-				onsaved(await pb.collection('posts').create<Post>(record, { signal: timeout() }));
+				let saved: Pick<Post, 'id' | 'day'> = record;
+				try {
+					saved = await pb.collection('posts').create<Post>(record, { signal: timeout() });
+				} catch (err) {
+					// Id:t finns redan: ett tidigare försök sparade inlägget.
+					if (!(err as { response?: { data?: { id?: unknown } } }).response?.data?.id) throw err;
+				}
+				await savePhotos(saved.id);
+				onsaved(saved);
 			} catch (err) {
 				if (!isNetworkError(err)) throw err;
 				await enqueue(record);
+				await savePhotos(record.id);
 				onsaved(record, true);
 			}
 		} catch (err) {
@@ -358,6 +389,17 @@
 					class={input}
 				></textarea>
 			</label>
+
+			<PhotoPicker
+				existing={initial?.expand?.photos_via_post ?? []}
+				postId={initial?.id}
+				bind:added={addedPhotos}
+				bind:removed={removedPhotos}
+				bind:busy={preparing}
+				onlocation={(p) => {
+					if (config.located && !locationText.trim()) locationText = formatLocation(p);
+				}}
+			/>
 		</div>
 
 		{#if errors.form}
@@ -365,8 +407,8 @@
 		{/if}
 
 		<div class="flex gap-3">
-			<button type="submit" disabled={busy} class="btn-primary flex-1">
-				{busy ? 'Sparar…' : 'Spara'}
+			<button type="submit" disabled={busy || preparing} class="btn-primary flex-1">
+				{busy ? 'Sparar…' : preparing ? 'Förbereder bilder…' : 'Spara'}
 			</button>
 			<button type="button" onclick={oncancel} class="btn-ghost">Avbryt</button>
 		</div>

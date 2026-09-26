@@ -33,7 +33,8 @@ export default defineConfig({
 				]
 			},
 			workbox: {
-				globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
+				// wasm = webp-kodaren som Safari behöver för att skala bilder, även utan nät.
+				globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2,wasm}'],
 				navigateFallback: '/',
 				// PocketBase API och admin ska aldrig besvaras från cachen.
 				navigateFallbackDenylist: [/^\/api\//, /^\/_\//],
@@ -53,11 +54,13 @@ export default defineConfig({
 						}
 					},
 					{
-						urlPattern: ({ url }) => url.pathname.startsWith('/api/files/'),
+						// Original (hämtas med ?download=1) är stora och cachas inte.
+						urlPattern: ({ url }) =>
+							url.pathname.startsWith('/api/files/') && !url.searchParams.has('download'),
 						handler: 'CacheFirst',
 						options: {
 							cacheName: 'api-files',
-							expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 90 },
+							expiration: { maxEntries: 1000, maxAgeSeconds: 60 * 60 * 24 * 90 },
 							cacheableResponse: { statuses: [200] }
 						}
 					}
@@ -65,6 +68,8 @@ export default defineConfig({
 			}
 		})
 	],
+	// Webp-kodaren laddar sin wasm-fil relativt sig själv; förpaketering bryter det.
+	optimizeDeps: { exclude: ['@jsquash/webp'] },
 	server: {
 		// Under utveckling körs PocketBase separat på port 8090.
 		proxy: {

@@ -2,14 +2,14 @@
 	import { auth, logout } from '$lib/auth.svelte';
 	import Avatar from '$lib/Avatar.svelte';
 	import Icon from '$lib/Icon.svelte';
-	import { clearOfflineData, offline } from '$lib/offline.svelte';
+	import { clearOfflineData, offline, waitingLabel } from '$lib/offline.svelte';
 
-	const waiting = $derived(offline.queue.length);
+	const waiting = $derived(waitingLabel());
 
 	async function signOut() {
 		if (
-			waiting > 0 &&
-			!confirm(`${waiting} inlägg har inte skickats än och försvinner om du loggar ut. Logga ut ändå?`)
+			waiting &&
+			!confirm(`${waiting} har inte skickats än och försvinner om du loggar ut. Logga ut ändå?`)
 		)
 			return;
 		await clearOfflineData();
@@ -40,9 +40,7 @@
 			{offline.online ? 'Uppkopplad' : 'Ingen uppkoppling'}
 		</p>
 		<p class="text-sm text-muted">
-			{waiting === 0
-				? 'Allt är skickat.'
-				: `${waiting} inlägg väntar på att skickas från den här enheten.`}
+			{waiting ? `${waiting} väntar på att skickas från den här enheten.` : 'Allt är skickat.'}
 		</p>
 	</section>
 
