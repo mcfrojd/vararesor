@@ -53,24 +53,40 @@ export interface PendingPhoto {
 	post: string;
 	trip: string;
 	day: string;
+	/** Samma som på `Photo`. */
+	taken: string;
+	location: PhotoData['location'];
 	stage: QueuedPhoto['stage'];
 	error?: string;
 	/** Lokal adress till miniatyren (blob:). */
 	thumbUrl: string;
 }
 
+/** En uppladdad bild som ska flyttas till ett inlägg (t.ex. från dagens bilder). */
+export interface QueuedMove {
+	/** Bildens id. */
+	id: string;
+	post: string;
+	queuedAt: string;
+	error?: string;
+}
+
 const db = new Dexie('vararesor') as Dexie & {
 	queue: EntityTable<QueuedPost, 'id'>;
 	photos: EntityTable<QueuedPhoto, 'id'>;
+	moves: EntityTable<QueuedMove, 'id'>;
 };
 db.version(1).stores({ queue: 'id, queuedAt' });
 db.version(2).stores({ queue: 'id, queuedAt', photos: 'id, queuedAt, post' });
+db.version(3).stores({ queue: 'id, queuedAt', photos: 'id, queuedAt, post', moves: 'id, queuedAt' });
 
 /** Reaktivt tillstånd som sidorna läser. */
 export const offline = $state({
 	online: typeof navigator === 'undefined' ? true : navigator.onLine,
 	queue: [] as QueuedPost[],
 	photos: [] as PendingPhoto[],
+	/** Bilder som väntar på att flyttas: bildens id → inläggets id. */
+	moves: {} as Record<string, string>,
 	syncing: false
 });
 
@@ -103,14 +119,18 @@ async function refresh() {
 				post: p.data.post,
 				day: p.data.day.slice(0, 10),
 				trip: p.data.trip,
+				taken: p.data.taken,
+				location: p.data.location,
 				stage: p.stage,
 				error: p.error,
 				thumbUrl: thumbUrls.get(p.id)!
 			};
 		});
+		offline.moves = Object.fromEntries((await db.moves.toArray()).map((m) => [m.id, m.post]));
 	} catch {
 		offline.queue = []; // IndexedDB blockerad (t.ex. privat läge)
 		offline.photos = [];
+		offline.moves = {};
 	}
 }
 
@@ -139,8 +159,10 @@ export async function enqueue(data: PostData) {
 
 export async function removeQueued(id: string) {
 	await db.queue.delete(id);
-	// Bilderna hör till inlägget och kan inte skickas utan det.
-	await db.photos.where('post').equals(id).delete();
+	// Bilderna hör till inlägget och kan inte skickas utan det. Uppladdade
+	// bilder som skulle flyttas dit stannar där de är.
+	await db.photos.filter((p) => p.data.post === id).delete();
+	await db.moves.filter((m) => m.post === id).delete();
 	await refresh();
 }
 
@@ -185,6 +207,35 @@ export async function enqueuePhotos(items: PhotoToQueue[], base: Pick<PhotoData,
 	);
 	await refresh();
 	void sync();
+}
+
+/**
+ * Lägger bilder i ett inlägg, t.ex. dagens bilder i ett nytt inlägg. Bilder som
+ * ännu ligger i kön får bara nytt mål. Uppladdade bilder flyttas direkt om det
+ * går, och annars när nätet är tillbaka (eller när inlägget skickats).
+ */
+export async function attachPhotos(ids: string[], post: string) {
+	if (ids.length === 0) return;
+	let queued = false;
+	const postQueued = !!(await db.queue.get(post));
+	for (const id of ids) {
+		if (await db.photos.get(id)) {
+			await db.photos.update(id, { 'data.post': post });
+			continue;
+		}
+		if (navigator.onLine && !postQueued) {
+			try {
+				await pb.collection('photos').update(id, { post }, { signal: timeout(), requestKey: null });
+				continue;
+			} catch (err) {
+				if (!isNetworkError(err)) throw err;
+			}
+		}
+		await db.moves.put({ id, post, queuedAt: new Date().toISOString() });
+		queued = true;
+	}
+	await refresh();
+	if (queued) void sync();
 }
 
 export async function removeQueuedPhoto(id: string) {
@@ -249,7 +300,23 @@ export async function sync() {
 				}
 			}
 		}
-		// Bilderna efter inläggen, eftersom de pekar på dem.
+		// Flyttar och bilder efter inläggen, eftersom de pekar på dem.
+		if (navigator.onLine)
+			for (const move of await db.moves.orderBy('queuedAt').toArray()) {
+				if (move.error || (await db.queue.get(move.post))) continue;
+				try {
+					await pb.collection('photos').update(move.id, { post: move.post }, { signal: timeout(), requestKey: null });
+					await db.moves.delete(move.id);
+					sent++;
+				} catch (err) {
+					if (isNetworkError(err)) break;
+					const e = err as ClientResponseError;
+					if (e.status === 401) break;
+					// Bilden eller inlägget finns inte längre: inget att flytta.
+					if (e.status === 404) await db.moves.delete(move.id);
+					else await db.moves.update(move.id, { error: serverMessage(e) });
+				}
+			}
 		if (navigator.onLine)
 			for (const item of await db.photos.orderBy('queuedAt').toArray()) {
 				if (item.error) continue;
@@ -288,7 +355,8 @@ export function startSync() {
 	// "online" kommer inte alltid (t.ex. när täckningen bara är dålig), så försök
 	// också med jämna mellanrum så länge något väntar.
 	setInterval(() => {
-		if (offline.queue.some((q) => !q.error) || offline.photos.some((p) => !p.error)) void sync();
+		if (offline.queue.some((q) => !q.error) || offline.photos.some((p) => !p.error) || Object.keys(offline.moves).length)
+			void sync();
 	}, 30_000);
 	void refresh().then(sync);
 }
@@ -297,8 +365,10 @@ export function startSync() {
 export async function clearOfflineData() {
 	await db.queue.clear().catch(() => {});
 	await db.photos.clear().catch(() => {});
+	await db.moves.clear().catch(() => {});
 	offline.queue = [];
 	offline.photos = [];
+	offline.moves = {};
 	if ('caches' in window) {
 		for (const name of await caches.keys()) {
 			if (name.startsWith('api-')) await caches.delete(name);

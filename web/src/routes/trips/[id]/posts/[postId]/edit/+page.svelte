@@ -23,6 +23,7 @@
 			tripId={trip.id}
 			{post}
 			day={post.day}
+			dayPhotos={data.dayPhotos}
 			onsaved={(saved) => goto(`/trips/${trip.id}/posts/${saved.id}`, { replaceState: true })}
 			oncancel={() => history.back()}
 		/>

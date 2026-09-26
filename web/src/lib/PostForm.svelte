@@ -1,10 +1,18 @@
 <script lang="ts">
 	import { auth } from './auth.svelte';
 	import { nowTime, today, toDateInput } from './format';
-	import { enqueue, enqueuePhotos, isNetworkError, newId, timeout } from './offline.svelte';
-	import type { PreparedPhoto } from './photos';
+	import {
+		attachPhotos,
+		enqueue,
+		enqueuePhotos,
+		isNetworkError,
+		newId,
+		offline,
+		timeout
+	} from './offline.svelte';
+	import { photoUrl, type PreparedPhoto } from './photos';
 	import PhotoPicker from './PhotoPicker.svelte';
-	import { fieldErrors, pb, type Post, type PostDetails, type PostKind } from './pb';
+	import { fieldErrors, pb, type GeoPoint, type Photo, type Post, type PostDetails, type PostKind } from './pb';
 	import {
 		facilities,
 		formatLocation,
@@ -21,6 +29,7 @@
 		post,
 		kind: initialKind,
 		day: initialDay,
+		dayPhotos = [],
 		onsaved,
 		oncancel
 	}: {
@@ -28,6 +37,8 @@
 		post?: Post;
 		kind?: PostKind;
 		day: string;
+		/** Resans bilder som bara hör till en dag. De för inläggets dag kan läggas i inlägget. */
+		dayPhotos?: Photo[];
 		/** `queued` = sparat på enheten, skickas när nätet är tillbaka. */
 		onsaved: (post: Pick<Post, 'id' | 'day'>, queued?: boolean) => void;
 		oncancel: () => void;
@@ -43,7 +54,11 @@
 	let day = $state(initial ? toDateInput(initial.day) : initialDay);
 	// Nytt inlägg för i dag får klockslaget nu; andra dagar lämnas tiden tom.
 	// svelte-ignore state_referenced_locally
-	let time = $state(initial ? initial.time : initialDay === today() ? nowTime() : '');
+	const defaultTime = initial ? initial.time : initialDay === today() ? nowTime() : '';
+	let time = $state(defaultTime);
+	// Tiden tas från vald bild tills man ändrat den själv.
+	// svelte-ignore state_referenced_locally
+	let timeTouched = $state(!!initial?.time);
 	let title = $state(initial?.title ?? '');
 	let category = $state(initial?.category ?? '');
 	let body = $state(initial?.body ?? '');
@@ -62,6 +77,66 @@
 	let addedPhotos = $state.raw<PreparedPhoto[]>([]);
 	let removedPhotos = $state<string[]>([]);
 	let preparing = $state(false);
+
+	/** Dagens bilder (uppladdade eller i kön) för vald dag, att välja bland. */
+	interface Candidate {
+		id: string;
+		thumb: string;
+		taken: string;
+		location: GeoPoint;
+		fromTrack: boolean;
+	}
+	const candidates = $derived<Candidate[]>(
+		[
+			...dayPhotos
+				.filter((p) => p.day.slice(0, 10) === day && !offline.moves[p.id])
+				.map((p) => ({
+					id: p.id,
+					thumb: photoUrl(p, 'thumb'),
+					taken: p.taken,
+					location: p.location,
+					fromTrack: p.location_source === 'track'
+				})),
+			...offline.photos
+				.filter((p) => p.trip === tripId && !p.post && p.day === day && !dayPhotos.some((d) => d.id === p.id))
+				.map((p) => ({ id: p.id, thumb: p.thumbUrl, taken: p.taken, location: p.location, fromTrack: false }))
+		].sort((a, b) => a.taken.localeCompare(b.taken))
+	);
+	let chosen = $state<string[]>([]);
+	// Positionen kommer från en vald bild och följer valet.
+	let locationFromChosen = $state(false);
+
+	function toggleChosen(id: string) {
+		chosen = chosen.includes(id) ? chosen.filter((x) => x !== id) : [...chosen, id];
+		fillFromChosen();
+	}
+
+	/** Tid och plats från den tidigaste valda bilden, om man inte fyllt i dem själv. */
+	function fillFromChosen() {
+		const picked = candidates.filter((c) => chosen.includes(c.id));
+		if (!timeTouched) time = picked.find((c) => c.taken)?.taken.slice(11, 16) || defaultTime;
+		if (!config?.located || locationSource === 'manual') return;
+		if (locationText.trim() && !locationFromChosen) return;
+		const at = picked.find((c) => hasLocation(c.location));
+		if (at) {
+			locationText = formatLocation(at.location);
+			locationSource = at.fromTrack ? 'track' : 'photo';
+			locationFromChosen = true;
+		} else if (locationFromChosen) {
+			locationText = '';
+			locationSource = '';
+			locationFromChosen = false;
+		}
+	}
+
+	/** Ny dag: bilder från en annan dag hör inte hit. */
+	function changeDay() {
+		const ids = candidates.map((c) => c.id);
+		if (chosen.some((id) => !ids.includes(id))) {
+			chosen = chosen.filter((id) => ids.includes(id));
+			fillFromChosen();
+		}
+	}
 
 	let locating = $state(false);
 	let errors = $state<Record<string, string>>({});
@@ -84,6 +159,7 @@
 			(pos) => {
 				locationText = formatLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude });
 				locationSource = 'manual';
+				locationFromChosen = false;
 				locating = false;
 			},
 			() => {
@@ -145,13 +221,14 @@
 
 		busy = true;
 		/** Nya bilder går alltid via kön; de laddas upp i bakgrunden. */
-		const savePhotos = (postId: string) =>
-			addedPhotos.length === 0
-				? Promise.resolve()
-				: enqueuePhotos(
-						addedPhotos.map((photo) => ({ photo, post: postId, day })),
-						{ trip: tripId, author: auth.user?.id ?? '' }
-					);
+		const savePhotos = async (postId: string) => {
+			await attachPhotos(chosen, postId);
+			if (addedPhotos.length > 0)
+				await enqueuePhotos(
+					addedPhotos.map((photo) => ({ photo, post: postId, day })),
+					{ trip: tripId, author: auth.user?.id ?? '' }
+				);
+		};
 		try {
 			if (initial) {
 				const saved = await pb.collection('posts').update<Post>(initial.id, data, { signal: timeout() });
@@ -236,15 +313,54 @@
 			{/if}
 		</div>
 
+		{#if candidates.length > 0}
+			<fieldset class="card p-4">
+				<legend class="sr-only">Dagens bilder</legend>
+				<p class="font-semibold text-ink">Vill du ta med någon av dagens bilder?</p>
+				<p class="mb-3 text-xs text-muted">
+					{chosen.length
+						? `${chosen.length} vald${chosen.length === 1 ? '' : 'a'}. Tid och plats hämtas från bilden om de är tomma.`
+						: 'Tryck på en bild för att välja den. Tid och plats hämtas från bilden.'}
+				</p>
+				<div class="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+					{#each candidates as c (c.id)}
+						{@const on = chosen.includes(c.id)}
+						<button
+							type="button"
+							aria-pressed={on}
+							aria-label="{on ? 'Ta bort' : 'Välj'} bilden{c.taken ? ` från kl. ${c.taken.slice(11, 16)}` : ''}"
+							onclick={() => toggleChosen(c.id)}
+							class="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition {on
+								? 'border-rust'
+								: 'border-transparent opacity-80 hover:opacity-100'}"
+						>
+							<img src={c.thumb} alt="" class="h-full w-full object-cover" />
+							{#if c.taken}
+								<span class="absolute bottom-0.5 left-0.5 rounded bg-black/55 px-1 text-[10px] font-semibold text-white">
+									{c.taken.slice(11, 16)}
+								</span>
+							{/if}
+							{#if on}
+								<span
+									class="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rust text-xs font-bold text-white"
+									>✓</span
+								>
+							{/if}
+						</button>
+					{/each}
+				</div>
+			</fieldset>
+		{/if}
+
 		<div class="card space-y-5 p-5">
 			<div class="grid grid-cols-[3fr_2fr] gap-3">
 				<label class="block space-y-1.5">
 					<span class="label">Dag</span>
-					<input type="date" required bind:value={day} class="{input} min-w-0" />
+					<input type="date" required bind:value={day} onchange={changeDay} class="{input} min-w-0" />
 				</label>
 				<label class="block space-y-1.5">
 					<span class="label">Tid</span>
-					<input type="time" bind:value={time} class="{input} min-w-0" />
+					<input type="time" bind:value={time} oninput={() => (timeTouched = true)} class="{input} min-w-0" />
 				</label>
 			</div>
 
@@ -365,7 +481,10 @@
 					<div class="flex gap-2">
 						<input
 							bind:value={locationText}
-							oninput={() => (locationSource = 'manual')}
+							oninput={() => {
+								locationSource = 'manual';
+								locationFromChosen = false;
+							}}
 							inputmode="decimal"
 							placeholder="Lägg till plats? (lat, lon)"
 							aria-label="Position"
