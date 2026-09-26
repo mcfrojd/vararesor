@@ -1,6 +1,9 @@
 services:
   vararesor:
-    build: .
+    build:
+      context: .
+      args:
+        APP_VERSION: ${APP_VERSION:-}
     container_name: vararesor
     restart: unless-stopped
     ports:

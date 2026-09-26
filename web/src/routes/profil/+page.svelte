@@ -42,6 +42,97 @@
 
 	const waiting = $derived(waitingLabel());
 
+	// ---- Immich: nyckeln sparas dolt på kontot; servern säger bara om den finns och fungerar.
+	interface ImmichStatus {
+		configured: boolean;
+		source: '' | 'profil' | 'env';
+		found: number;
+		ok: boolean | null;
+		message: string;
+	}
+	let immich = $state<ImmichStatus | null>(null);
+	let immichKey = $state('');
+	let immichBusy = $state(false);
+	let immichError = $state('');
+
+	async function loadImmich(check = false) {
+		try {
+			immich = await pb.send<ImmichStatus>(`/api/vararesor/immich${check ? '?check=1' : ''}`, { requestKey: null });
+		} catch {
+			immich = null;
+		}
+	}
+	$effect(() => {
+		void loadImmich();
+	});
+
+	async function saveImmichKey(key: string) {
+		if (!auth.user) return;
+		immichBusy = true;
+		immichError = '';
+		try {
+			// Dolt fält: sparas via en egen route, inte vanliga API:t.
+			immich = await pb.send<ImmichStatus>('/api/vararesor/immich', {
+				method: 'POST',
+				body: { key: key.trim() },
+				signal: timeout(),
+				requestKey: null
+			});
+			immichKey = '';
+		} catch {
+			immichError = 'Kunde inte spara nyckeln. Finns det nät?';
+		} finally {
+			immichBusy = false;
+		}
+	}
+
+	async function testImmich() {
+		immichBusy = true;
+		await loadImmich(true);
+		immichBusy = false;
+	}
+
+	// ---- Version: den här appen (inbyggd vid bygget) och den som ligger på servern.
+	interface Version {
+		commit: string;
+		date: string;
+		subject: string;
+		pushed: boolean;
+		dirty: boolean;
+		built: string;
+	}
+	const parseVersion = (raw: string): Version | null => {
+		try {
+			return raw ? (JSON.parse(raw) as Version) : null;
+		} catch {
+			return null;
+		}
+	};
+	const mine = parseVersion(__APP_VERSION__);
+	let server = $state<Version | null | undefined>(undefined);
+	$effect(() => {
+		fetch('/api/vararesor/version', { cache: 'no-store' })
+			.then((r) => r.json())
+			.then((d) => (server = d.version ?? null))
+			.catch(() => (server = undefined));
+	});
+	const stamp = (iso: string) =>
+		new Intl.DateTimeFormat('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(
+			new Date(iso)
+		);
+
+	/** Hämta den nya versionen: service workern uppdateras och sidan laddas om. */
+	async function update() {
+		try {
+			const reg = await navigator.serviceWorker?.getRegistration();
+			await reg?.update();
+			reg?.waiting?.postMessage({ type: 'SKIP_WAITING' });
+		} catch {
+			// laddar om ändå
+		}
+		location.reload();
+	}
+
 	let avatarBusy = $state(false);
 	let avatarError = $state('');
 
@@ -168,9 +259,106 @@
 		</p>
 	</section>
 
-	<a href="/profil/bildplats" class="mt-4 block text-center text-sm text-muted underline hover:text-ink">
-		Testa om bildernas plats följer med
-	</a>
+	<section class="card mt-4 space-y-3 p-5" aria-labelledby="immich-rubrik">
+		<div>
+			<p id="immich-rubrik" class="label">Immich</p>
+			<p class="mt-1 text-sm text-muted">
+				Mobilen tar bort platsen ur bilder som laddas upp. Med en nyckel till din Immich hämtar servern platsen
+				från originalet där. Skapa nyckeln i Immich under Kontoinställningar → API-nycklar, med behörigheten
+				<strong>asset.read</strong>.
+			</p>
+		</div>
+		{#if immich && !immich.configured}
+			<p class="text-sm text-rust">Immich är inte uppsatt på servern (IMMICH_URL saknas).</p>
+		{:else if immich}
+			<p class="flex items-center gap-2 text-ink">
+				<span class="h-2.5 w-2.5 rounded-full {immich.source ? 'bg-accent' : 'bg-line'}" aria-hidden="true"></span>
+				{immich.source === 'profil'
+					? 'Din nyckel är sparad.'
+					: immich.source === 'env'
+						? 'Nyckel finns i serverns inställningar (.env).'
+						: 'Ingen nyckel än.'}
+			</p>
+			{#if immich.found > 0}
+				<p class="text-sm text-muted">{immich.found} av dina bilder har fått platsen från Immich.</p>
+			{/if}
+			{#if immich.ok !== null}
+				<p class="text-sm {immich.ok ? 'text-accent' : 'text-red-600'}" role="status">{immich.message}</p>
+			{/if}
+			<form
+				class="flex gap-2"
+				onsubmit={(e) => {
+					e.preventDefault();
+					if (immichKey.trim()) void saveImmichKey(immichKey);
+				}}
+			>
+				<input
+					type="password"
+					autocomplete="off"
+					bind:value={immichKey}
+					placeholder={immich.source === 'profil' ? 'Byt nyckel' : 'Klistra in nyckeln'}
+					aria-label="Immich-nyckel"
+					class="field min-w-0 flex-1"
+				/>
+				<button type="submit" disabled={immichBusy || !immichKey.trim()} class="btn-small shrink-0">Spara</button>
+			</form>
+			<div class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+				{#if immich.source}
+					<button type="button" onclick={testImmich} disabled={immichBusy} class="font-medium text-rust hover:underline">
+						{immichBusy ? 'Provar…' : 'Prova nyckeln'}
+					</button>
+				{/if}
+				{#if immich.source === 'profil'}
+					<button
+						type="button"
+						onclick={() => confirm('Ta bort din Immich-nyckel?') && saveImmichKey('')}
+						disabled={immichBusy}
+						class="font-medium text-muted hover:text-ink hover:underline"
+					>
+						Ta bort nyckeln
+					</button>
+				{/if}
+			</div>
+			{#if immichError}<p class="text-sm text-red-600" role="alert">{immichError}</p>{/if}
+		{:else}
+			<p class="text-sm text-muted">Kan inte visa Immich utan nät.</p>
+		{/if}
+	</section>
+
+	<section class="card mt-4 space-y-2 p-5" aria-labelledby="version-rubrik">
+		<p id="version-rubrik" class="label">Version</p>
+		{#if mine}
+			<p class="text-sm text-ink">
+				<a
+					href="https://github.com/mcfrojd/vararesor/commit/{mine.commit}"
+					target="_blank"
+					rel="noopener"
+					class="font-mono font-semibold hover:underline">{mine.commit}</a
+				>
+				· {stamp(mine.date)}
+			</p>
+			<p class="text-sm text-muted">{mine.subject}</p>
+			<ul class="space-y-0.5 text-sm">
+				<li>✅ Committad</li>
+				<li>{mine.pushed ? '✅ Pushad till GitHub' : '⚠️ Inte pushad till GitHub'}</li>
+				{#if mine.dirty}<li>⚠️ Byggd med ändringar som inte är committade</li>{/if}
+				{#if server === undefined}
+					<li class="text-muted">Servern: kan inte fråga utan nät</li>
+				{:else if server === null}
+					<li class="text-muted">Servern: okänd version</li>
+				{:else if server.commit === mine.commit && server.built === mine.built}
+					<li>✅ Deployad, och det är den här versionen du kör</li>
+				{:else}
+					<li class="text-rust">
+						⬆️ Servern har en nyare version ({server.commit}, {stamp(server.built)}).
+						<button type="button" onclick={update} class="ml-1 font-semibold underline">Ladda om</button>
+					</li>
+				{/if}
+			</ul>
+		{:else}
+			<p class="text-sm text-muted">Byggd utan versionsinfo (starta med ./deploy.sh).</p>
+		{/if}
+	</section>
 
 	<button type="button" onclick={signOut} class="btn-ghost mt-6 w-full text-rust">
 		<Icon name="logout" class="h-5 w-5" />

@@ -5,7 +5,10 @@
 name: vararesor-test
 services:
   vararesor-test:
-    build: .
+    build:
+      context: .
+      args:
+        APP_VERSION: ${APP_VERSION:-}
     container_name: vararesor-test
     restart: unless-stopped
     ports:

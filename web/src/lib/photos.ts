@@ -61,7 +61,10 @@ async function readable(file: File): Promise<File> {
 		const bytes = await file.arrayBuffer();
 		return new File([bytes], file.name, { type: file.type || 'image/jpeg', lastModified: file.lastModified });
 	} catch {
-		throw new Error(`Mobilen lämnade inte ut ${file.name}. Välj bilden igen, eller stäng appen helt och försök igen.`);
+		// Händer med rörliga bilder (Motion Photo) när man i bildväljaren valt att ta med platsen.
+		throw new Error(
+			`Mobilen lämnade inte ut ${file.name}. Är det en rörlig bild? Välj den igen och svara "Ta inte med" på frågan om plats; platsen hämtas ändå från Immich.`
+		);
 	}
 }
 

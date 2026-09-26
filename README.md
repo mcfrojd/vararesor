@@ -45,6 +45,8 @@ Varje resa har en **ägare** och **deltagare**.
 Olika typer av inlägg har olika fält. Det gör det snabbt att fylla i på plats.
 
 ### Övernattning: ställplats, camping, fricamping
+
+(På husbilsresor. På andra resor blir övernattning ett **boende**, se nedan.)
 - Namn, typ (ställplats / camping / fricamping)
 - Position (GPS / karta)
 - Pris, betalsätt
@@ -52,6 +54,10 @@ Olika typer av inlägg har olika fält. Det gör det snabbt att fylla i på plat
 - Underlag, utsikt, ljudnivå
 - Betyg och anteckning
 - Bilder
+
+### Boende: hotell, motell, vandrarhem, lägenhet, stuga, hos vänner/släkt
+
+På resor som inte är husbilsresor. Ett boende gäller från incheckningen (inläggets dag) till **utcheckningen**, som förvalt är resans sista dag, så att ett hotell för hela resan bara behöver ett inlägg. Bor man på flera ställen lägger man till ett boende per ställe. Fält: namn, typ, betyg, pris, betalsätt, rum, frukost ingår, position, anteckning. Dagarna under vistelsen visar "Natt 2 av 7" och på sista dagen "Utcheckning". Lagras som `kind = overnight` med `details.until`, `room`, `breakfast`.
 
 ### Mat och dryck
 - Namn, typ (restaurang, café, bar, bryggeri, vingård…)
@@ -161,7 +167,7 @@ Så fungerar det i appen nu:
 - **I mobilen** läses bilden in rättvänd och skalas till två webp-filer: `web` (längsta sida 1600 px, för att visa i appen) och `thumb` (480 px, för listor och kartan). Chrome och Firefox skapar webp själva; Safari kan inte, så där används en webp-kodare i WebAssembly (`@jsquash/webp`), som följer med appen och fungerar offline.
 - **EXIF:** tid (med tidszon) och GPS läses ur bilden (`exifr`). Har inlägget ingen position föreslås bildens. Saknar bilden GPS (många mobiler tar bort den vid uppladdning från webben) tar servern positionen ur Doris spår vid bildens tidpunkt (se Karta). Går inte det heller visas bilden vid inläggets position.
 - **Många bilder på en gång:** "Lägg till bilder" på resans sida (`/trips/<id>/photos`). Varje bild sorteras till dagen den togs (EXIF-tid; utan tid väljer man dag) och läggs i ett inlägg samma dag om bildens GPS är inom 300 m från inlägget, eller tiden är inom en timme från inläggets tid (inte om platserna är mer än 2 km isär). Annars hamnar den under dagen som "Dagens bilder". Förslagen visas innan något laddas upp och kan ändras per bild. Bilder som redan finns på resan (samma tidpunkt och storlek) känns igen och följer inte med om man inte bockar i dem. Logiken finns i `src/lib/photoMatch.ts`.
-- **Plats från Immich:** Android tar bort GPS ur bilder som laddas upp från webbläsaren, oavsett väljare (testat på Pixel 10 i september 2026: bildväljaren, Filer och delning från Google Foto). Men Immichs mobilapp säkerhetskopierar originalen med platsen kvar. Servern letar därför upp samma bild i uppladdarens Immich (samma sekund enligt kameran, helst samma storlek) och tar platsen därifrån (`location_source = 'immich'`), före Doris spår. Det görs när bilden laddas upp och sedan var 15:e minut för bilder som inte hittats än (mobilen säkerhetskopierar när den hinner). Inlägg vars position kom från spåret får sin första bilds riktiga plats. Kräver `IMMICH_URL` och en Immich-nyckel per person i `IMMICH_API_KEYS` (se `.env.example`); den som saknar nyckel får spåret som förut.
+- **Plats från Immich:** Android tar bort GPS ur bilder som laddas upp från webbläsaren, oavsett väljare (testat på Pixel 10 i september 2026: bildväljaren, Filer och delning från Google Foto). Men Immichs mobilapp säkerhetskopierar originalen med platsen kvar. Servern letar därför upp samma bild i uppladdarens Immich (samma sekund enligt kameran, helst samma storlek) och tar platsen därifrån (`location_source = 'immich'`), före Doris spår. Det görs när bilden laddas upp och sedan var 15:e minut för bilder som inte hittats än (mobilen säkerhetskopierar när den hinner). Inlägg vars position kom från spåret får sin första bilds riktiga plats. Kräver `IMMICH_URL` i `.env` och en Immich-nyckel per person, som var och en sparar på sin profilsida (dolt fält `users.immich_key`, sätts via `POST /api/vararesor/immich` eftersom dolda fält inte kan sättas via vanliga API:t). `IMMICH_API_KEYS` i `.env` fungerar också. Den som saknar nyckel får spåret som förut. Rörliga bilder (Motion Photo) går inte att läsa i Chrome om man i bildväljaren valt att ta med platsen; välj "Ta inte med", platsen kommer ändå från Immich.
 - **Dela till appen:** bilder kan också delas till appen från mobilens galleri (*Dela → Våra resor*, kräver att appen är installerad): manifestet har ett `share_target`, och `static/share-target.js` i service workern tar emot bilderna och skickar dem till `/bilder/ladda-upp`. Platsen följer inte med den vägen heller (den kommer från Immich). I bildvisningen står det *Plats från Doris spår* när positionen kommer från spåret och inte från bilden.
 - **Bilder-fliken:** ett album per resa (omslag = resans omslagsbild, annars första bilden), och sist *Okategoriserat*. I ett album kan resans ägare öppna en bild och välja *Omslag* för att göra den till resans omslagsbild. *Ladda upp* sorterar bilder över alla resor: resan vars datum omfattar dagen bilden togs (tidigast startande om flera), sedan dag och inlägg som ovan. Passar ingen resa blir bilden okategoriserad (utan `trip`); sådana bilder syns bara för den som laddat upp dem. När en resa skapas eller får nya datum flyttar servern in de okategoriserade bilder som passar (dagen inom resan, och uppladdaren är ägare eller deltagare), under dagens bilder (`pb_hooks/albums.js`). En okategoriserad bild kan också läggas i en resa för hand. Tas en resa bort blir dess bilder okategoriserade i stället för att försvinna. I albumen visar en liten profilbild i hörnet vem som laddat upp bilden. I bildvisningen (överallt) öppnar kartknappen bildens position i Google Maps, om bilden har en. Bilder tas bort i visningen (papperskorgen) eller flera på en gång med *Ta bort* i albumet; den som laddat upp bilden och resans ägare får ta bort den.
 - **Dagens bilder i ett nytt inlägg:** finns det dagens bilder när man skriver ett inlägg (eller redigerar ett) visas de överst: "Vill du ta med någon av dagens bilder?". Valda bilder flyttas in i inlägget när det sparas, även utan nät (flytten köas). Tid och plats hämtas från den tidigaste valda bilden så länge man inte fyllt i dem själv, och töms igen om man väljer bort bilden.
@@ -311,6 +317,10 @@ PocketBase-backupen innehåller **inte** filerna i S3, och Garage har ingen vers
 Appen nås på `http://<server>:8090/`. Lägg den bakom en reverse proxy med HTTPS (t.ex. Caddy, Nginx Proxy Manager eller Cloudflare Tunnel). PWA-installation och service worker kräver HTTPS.
 
 **Uppdatera:** `git pull && docker compose up -d --build`. Databasen i `./pb_data` ligger kvar och nya migreringar körs automatiskt.
+
+### Deploya med version
+
+`./deploy.sh` bygger och startar appen med versionsinfo (commit, datum, meddelande, om commiten är pushad och om det fanns ocommittade ändringar). Profilsidan visar versionen appen i mobilen kör och den som ligger på servern, och erbjuder *Ladda om* när servern har en nyare. `./deploy.sh -f docker-compose.test.yml` gör samma sak för testmiljön.
 
 ### Utveckla lokalt
 

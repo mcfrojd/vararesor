@@ -3,7 +3,15 @@ import tailwindcss from '@tailwindcss/vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import { defineConfig } from 'vite';
 
+/** Miljövariabel vid bygget (Node), utan att dra in Nodes typer. */
+function buildEnv(name: string): string {
+	const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env;
+	return env?.[name] ?? '';
+}
+
 export default defineConfig({
+	// Versionen (se deploy.sh) byggs in i appen och visas på profilsidan.
+	define: { __APP_VERSION__: JSON.stringify(buildEnv('APP_VERSION')) },
 	plugins: [
 		tailwindcss(),
 		sveltekit(),

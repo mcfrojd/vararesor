@@ -8,9 +8,9 @@
 // tar platsen därifrån. Det går före Doris spår.
 //
 //   IMMICH_URL        t.ex. http://100.114.28.40:2283
-//   IMMICH_API_KEYS   e-post:nyckel per person, kommaseparerat. Nyckeln skapas
-//                     i Immich (Kontoinställningar → API-nycklar) och behöver
-//                     bara behörigheten asset.read.
+//   Nyckel per person: sätts på profilsidan (dolt fält users.immich_key), eller
+//   IMMICH_API_KEYS i .env (e-post:nyckel, kommaseparerat). Nyckeln skapas i
+//   Immich (Kontoinställningar → API-nycklar) och behöver bara asset.read.
 
 const WINDOW_MS = 2000; // kamerans tid har sekunder, Immich ibland millisekunder
 // Hittades inte: nya bilder försöks snart igen (mobilen säkerhetskopierar när
@@ -29,13 +29,55 @@ function config() {
 	return { url, keys };
 }
 
-/** Uppladdarens Immich-nyckel, eller tomt. */
-function keyFor(app, cfg, userId) {
+/** Uppladdarens Immich-nyckel och var den kommer ifrån ('profil' eller 'env'). */
+function keyInfo(app, cfg, userId) {
 	try {
-		return cfg.keys[app.findRecordById('users', userId).getString('email').toLowerCase()] || '';
+		const user = app.findRecordById('users', userId);
+		const own = user.getString('immich_key').trim();
+		if (own) return { key: own, source: 'profil' };
+		const env = cfg.keys[user.getString('email').toLowerCase()] || '';
+		return { key: env, source: env ? 'env' : '' };
 	} catch (_) {
-		return '';
+		return { key: '', source: '' };
 	}
+}
+
+function keyFor(app, cfg, userId) {
+	return keyInfo(app, cfg, userId).key;
+}
+
+/**
+ * Status för profilsidan: finns Immich, var kommer nyckeln ifrån, och svarar
+ * Immich med den (om `check`). Nyckeln själv lämnar aldrig servern.
+ */
+function status(app, userId, check) {
+	const cfg = config();
+	const info = keyInfo(app, cfg, userId);
+	const found = app.countRecords('photos', $dbx.hashExp({ author: userId, location_source: 'immich' }));
+	const result = { configured: !!cfg.url, source: info.source, found, ok: null, message: '' };
+	if (!check || !cfg.url || !info.key) return result;
+	try {
+		const res = $http.send({
+			url: `${cfg.url}/api/search/metadata`,
+			method: 'POST',
+			headers: { 'x-api-key': info.key, 'content-type': 'application/json', accept: 'application/json' },
+			body: JSON.stringify({ size: 1 }),
+			timeout: 10
+		});
+		result.ok = res.statusCode === 200;
+		result.message =
+			res.statusCode === 200
+				? 'Immich svarar och nyckeln fungerar.'
+				: res.statusCode === 401
+					? 'Immich känner inte igen nyckeln.'
+					: res.statusCode === 403
+						? 'Nyckeln saknar behörigheten asset.read.'
+						: `Immich svarade ${res.statusCode}.`;
+	} catch (err) {
+		result.ok = false;
+		result.message = 'Får ingen kontakt med Immich.';
+	}
+	return result;
 }
 
 /** Bilden ska slås upp: har tid, och platsen kommer inte redan från bilden själv. */
@@ -163,4 +205,4 @@ function backfill(app, limit) {
 	return n;
 }
 
-module.exports = { fill, backfill, lookup, config };
+module.exports = { fill, backfill, lookup, config, status };

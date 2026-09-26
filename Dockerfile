@@ -4,7 +4,9 @@ WORKDIR /web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
-RUN npm run build
+# Versionen (commit, datum, pushad) som JSON, satt av deploy.sh. Visas på profilsidan.
+ARG APP_VERSION=""
+RUN APP_VERSION="$APP_VERSION" npm run build
 
 # ---- Steg 2: PocketBase som serverar API + appen ----
 FROM alpine:3.22
@@ -21,6 +23,10 @@ RUN apk add --no-cache ca-certificates unzip wget \
 COPY pocketbase/pb_migrations /pb/pb_migrations
 COPY pocketbase/pb_hooks /pb/pb_hooks
 COPY --from=web /web/build /pb/pb_public
+
+# Samma version för servern, så att appen kan se om den har den senaste.
+ARG APP_VERSION=""
+ENV APP_VERSION=$APP_VERSION
 
 EXPOSE 8090
 VOLUME /pb/pb_data
