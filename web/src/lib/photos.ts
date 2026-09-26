@@ -130,6 +130,25 @@ export function cameraTime(raw: unknown, offset: unknown): { taken: string; take
 	return { taken, takenAt: isNaN(ms) ? '' : new Date(ms).toISOString() };
 }
 
+/** Profilbild: kvadrat, beskuren kring mitten, 512 px webp. */
+export const AVATAR_SIZE = 512;
+
+export async function prepareAvatar(file: File): Promise<Blob> {
+	const bitmap = await decode(file);
+	try {
+		const side = Math.min(bitmap.width, bitmap.height);
+		const size = Math.min(AVATAR_SIZE, side);
+		const canvas = document.createElement('canvas');
+		canvas.width = canvas.height = size;
+		const ctx = canvas.getContext('2d')!;
+		ctx.imageSmoothingQuality = 'high';
+		ctx.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, size, size);
+		return await toWebp(canvas);
+	} finally {
+		bitmap.close();
+	}
+}
+
 export function photoUrl(photo: Photo, size: 'thumb' | 'web' | 'original' = 'web'): string {
 	if (size === 'original' && photo.original)
 		// download: sparas som fil, och service workern cachar inte de stora originalen.
