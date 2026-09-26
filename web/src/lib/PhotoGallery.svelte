@@ -44,6 +44,8 @@
 		canSelect?: boolean;
 		/** Google Maps för bildens egen position (GPS eller Doris spår), annars tomt. */
 		maps: string;
+		/** Var positionen kommer ifrån, i text (se `location_source`). */
+		source?: string;
 		/** Positionen är var Doris stod, inte bildens egen. */
 		fromTrack?: boolean;
 		photo?: Photo;
@@ -53,6 +55,13 @@
 		selected = selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id];
 	}
 
+	/** Källan till bildens position (fältet `location_source` på bilden). */
+	const sources: Record<string, string> = {
+		exif: 'Plats från bilden',
+		immich: 'Plats från Immich',
+		track: 'Plats från Doris spår'
+	};
+
 	const all = $derived<Shown[]>([
 		...sortPhotos(photos).map((p) => ({
 			id: p.id,
@@ -60,6 +69,7 @@
 			maps: hasLocation(p.location)
 				? `https://www.google.com/maps/search/?api=1&query=${p.location.lat},${p.location.lon}`
 				: '',
+			source: sources[p.location_source] ?? '',
 			fromTrack: p.location_source === 'track',
 			photo: p,
 			thumb: photoUrl(p, 'thumb'),
@@ -178,7 +188,7 @@
 		<div class="flex items-center justify-between gap-3 p-3 text-sm text-white/80">
 			<span class="min-w-0">
 				{open + 1} / {all.length}{current.taken ? ` · ${current.taken.slice(11)}` : ''}
-				{#if current.fromTrack}<span class="block text-xs text-white/60">Plats från Doris spår</span>{/if}
+				{#if current.source && current.maps}<span class="block text-xs text-white/60">{current.source}</span>{/if}
 			</span>
 			<div class="flex items-center gap-2">
 				{#if actions && current.photo}{@render actions(current.photo)}{/if}
