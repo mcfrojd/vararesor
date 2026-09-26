@@ -69,7 +69,7 @@
 	const photoDays = $derived(new Set(data.dayPhotos.map((p) => p.day.slice(0, 10))));
 	const selectedPhotos = $derived(data.dayPhotos.filter((p) => p.day.slice(0, 10) === selected));
 	const selectedTrips = $derived(tripsByDay[selected] ?? []);
-	const selectedWeather = $derived(dayWeather(selectedPosts));
+	const selectedWeather = $derived(dayWeather(selectedPosts, selected, data.posts));
 
 	/** Små ikoner för dagens inlägg: en per typ, högst tre. */
 	function kindIcons(posts: Post[], photos = false): string[] {
@@ -118,7 +118,7 @@
 		{#each days as d (d)}
 			{@const posts = postsByDay[d] ?? []}
 			{@const trips = tripsByDay[d] ?? []}
-			{@const w = dayWeather(posts)}
+			{@const w = dayWeather(posts, d, data.posts)}
 			{@const inMonth = d.slice(0, 7) === month}
 			{@const isSelected = d === selected}
 			<button

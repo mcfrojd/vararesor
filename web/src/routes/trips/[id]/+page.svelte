@@ -25,7 +25,8 @@
 	} from '$lib/posts';
 	import { loadDorisTracks, type Line } from '$lib/tracks';
 	import TripMap from '$lib/TripMap.svelte';
-	import { dayWeather, tempRange, weatherInfo } from '$lib/weather';
+	import { dayWeather } from '$lib/weather';
+	import WeatherPill from '$lib/WeatherPill.svelte';
 	import BackLink from '$lib/BackLink.svelte';
 	import Fab from '$lib/Fab.svelte';
 	import Icon from '$lib/Icon.svelte';
@@ -213,17 +214,13 @@
 			{#each days as day (day)}
 				{@const n = dayNumber(trip.start_date, day)}
 				{@const posts = postsByDay[day] ?? []}
-				{@const w = dayWeather(posts)}
+				{@const w = dayWeather(posts, day, stays)}
 				<li id="dag-{day}" class="scroll-mt-24">
-					<div class="mb-3 flex items-baseline justify-between gap-3">
-						<h3 class="flex flex-wrap items-baseline gap-x-2">
+					<div class="mb-3 flex items-center justify-between gap-3">
+						<h3 class="flex flex-wrap items-center gap-x-2 gap-y-1">
 							<span class="title text-2xl">{n ? `Dag ${n}` : 'Före resan'}</span>
 							<span class="text-sm text-muted">{formatDay(day)}</span>
-							{#if w}
-								<span class="text-sm text-muted" title={weatherInfo(w.code).label}>
-									· {weatherInfo(w.code).icon} {tempRange(w)}
-								</span>
-							{/if}
+							{#if w}<WeatherPill weather={w} />{/if}
 							{#if day === todayDay}
 								<span class="rounded-full bg-rust-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rust">
 									I dag
@@ -238,7 +235,6 @@
 						</a>
 					</div>
 					{#each staysOn(day) as s (s.id)}
-						{@const sw = s.stay_weather?.days?.[day]}
 						<a
 							href="/trips/{trip.id}/posts/{s.id}"
 							class="mb-3 flex items-center gap-2 rounded-2xl bg-field px-3.5 py-2 text-sm text-muted transition hover:text-ink"
@@ -248,11 +244,7 @@
 								{day === s.details?.until ? 'Utcheckning' : `Natt ${dayNumber(s.day, day)} av ${nights(s)}`} ·
 								<span class="font-semibold text-ink">{s.title || 'Boende'}</span>
 							</span>
-							{#if sw}
-								<span class="shrink-0 text-xs" title={weatherInfo(sw.code).label}>
-									{weatherInfo(sw.code).icon} {tempRange(sw)}
-								</span>
-							{/if}
+
 						</a>
 					{/each}
 					{#if posts.length > 0}

@@ -6,7 +6,6 @@
 	import type { Post } from './pb';
 	import { formatLocation, hasLocation, kindOf, nights, nightsLabel } from './posts';
 	import Stars from './Stars.svelte';
-	import WeatherPill from './WeatherPill.svelte';
 
 	let {
 		post,
@@ -82,11 +81,9 @@
 	{#if post.body}
 		<p class="mt-3 line-clamp-3 text-sm leading-relaxed">{post.body}</p>
 	{/if}
-	{#if post.weather || post.rating}
-		<div class="mt-3 flex flex-wrap items-center justify-between gap-2">
-			{#if post.weather}<WeatherPill weather={post.weather} />{:else}<span></span>{/if}
-			{#if post.rating}<Stars value={post.rating} />{/if}
-		</div>
+	<!-- Vädret visas på dagens rubrik i stället för på varje inlägg. -->
+	{#if post.rating}
+		<div class="mt-3"><Stars value={post.rating} /></div>
 	{/if}
 	{#if pending}
 		<p class="mt-3 flex items-center justify-between gap-2 border-t border-line pt-2 text-xs">

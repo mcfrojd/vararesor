@@ -44,7 +44,21 @@ export function tempRange(w: Weather): string {
 	return `${Math.round(w.min)}–${deg(w.max)}`;
 }
 
-/** Dagens väder: från första inlägget den dagen som har väder. */
-export function dayWeather(posts: Pick<Post, 'weather'>[]): Weather | null {
-	return posts.find((p) => p.weather)?.weather ?? null;
+/**
+ * Dagens väder: från första inlägget den dagen som har väder, annars från ett
+ * boende som man bor på den natten (`stays` = inlägg att leta boendeväder i).
+ */
+export function dayWeather(
+	posts: Pick<Post, 'weather'>[],
+	day = '',
+	stays: Pick<Post, 'stay_weather'>[] = []
+): Weather | null {
+	const own = posts.find((p) => p.weather)?.weather;
+	if (own) return own;
+	if (!day) return null;
+	for (const s of stays) {
+		const w = s.stay_weather?.days?.[day];
+		if (w) return w;
+	}
+	return null;
 }
