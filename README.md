@@ -46,7 +46,7 @@ Olika typer av inlägg har olika fält. Det gör det snabbt att fylla i på plat
 
 ### Övernattning: ställplats, camping, fricamping
 
-(På husbilsresor. På andra resor blir övernattning ett **boende**, se nedan.)
+(På husbilsresor. På andra resor blir övernattning ett **boende**, se nedan.) Står man flera nätter på samma ställe fyller man i **utcheckning**; tomt betyder en natt. Dagarna efter visar då "🏕️ Natt 2 av 3" och "Utcheckning", med väder för varje natt, precis som för boenden.
 - Namn, typ (ställplats / camping / fricamping)
 - Position (GPS / karta)
 - Pris, betalsätt
@@ -57,7 +57,7 @@ Olika typer av inlägg har olika fält. Det gör det snabbt att fylla i på plat
 
 ### Boende: hotell, motell, vandrarhem, lägenhet, stuga, hos vänner/släkt
 
-På resor som inte är husbilsresor. Ett boende gäller från incheckningen (inläggets dag) till **utcheckningen**, som förvalt är resans sista dag, så att ett hotell för hela resan bara behöver ett inlägg. Bor man på flera ställen lägger man till ett boende per ställe. Fält: namn, typ, betyg, pris, betalsätt, rum, vad som ingår (frukost, middag eller all inclusive; frukost och middag går att kombinera, all inclusive står ensam), position, anteckning. Dagarna under vistelsen visar "Natt 2 av 7" och på sista dagen "Utcheckning", med dagens väder på boendets plats (servern hämtar alla nätter i ett anrop och sparar dem i `stay_weather`; nätter längre fram än 16 dagar fylls i när prognosen finns). Lagras som `kind = overnight` med `details.until`, `room` och `meals` (äldre boenden har `breakfast: true`, som visas som frukost).
+På resor som inte är husbilsresor. Ett boende gäller från incheckningen (inläggets dag) till **utcheckningen**, som förvalt är resans sista dag, så att ett hotell för hela resan bara behöver ett inlägg. Bor man på flera ställen lägger man till ett boende per ställe. Fält: namn, typ, betyg, pris, betalsätt, rum, vad som ingår (frukost, middag eller all inclusive; frukost och middag går att kombinera, all inclusive står ensam), position, anteckning. Dagarna under vistelsen visar "Natt 2 av 7" och på sista dagen "Utcheckning", med dagens väder på boendets plats (servern hämtar alla nätter i ett anrop och sparar dem i `stay_weather`; nätter längre fram än 16 dagar fylls i när prognosen finns). Lagras som `kind = overnight` med `details.lodging = true` (skiljer boende från ställplats), `until`, `room` och `meals` (äldre boenden har `breakfast: true`, som visas som frukost).
 
 ### Mat och dryck
 - Namn, typ (restaurang, café, bar, bryggeri, vingård…)

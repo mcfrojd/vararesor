@@ -16,7 +16,8 @@
 	} from '$lib/mapFilter';
 	import {
 		hasLocation,
-		isStay,
+		kindOf,
+		multiNight,
 		mapPoints,
 		nights,
 		photoLocation,
@@ -90,8 +91,8 @@
 	);
 	const todayDay = today();
 
-	// Boenden över flera nätter visas även på dagarna efter incheckningen.
-	const stays = $derived(allPosts.filter((p) => isStay(p) && p.details?.until));
+	// Övernattningar över flera nätter (ställplats eller boende) visas även på dagarna efter incheckningen.
+	const stays = $derived(allPosts.filter(multiNight));
 	const staysOn = (day: string) =>
 		stays.filter((p) => p.day.slice(0, 10) < day && day <= (p.details?.until ?? ''));
 
@@ -239,10 +240,10 @@
 							href="/trips/{trip.id}/posts/{s.id}"
 							class="mb-3 flex items-center gap-2 rounded-2xl bg-field px-3.5 py-2 text-sm text-muted transition hover:text-ink"
 						>
-							<span aria-hidden="true">🏨</span>
+							<span aria-hidden="true">{kindOf(s).icon}</span>
 							<span class="min-w-0 flex-1">
 								{day === s.details?.until ? 'Utcheckning' : `Natt ${dayNumber(s.day, day)} av ${nights(s)}`} ·
-								<span class="font-semibold text-ink">{s.title || 'Boende'}</span>
+								<span class="font-semibold text-ink">{s.title || kindOf(s).label}</span>
 							</span>
 
 						</a>

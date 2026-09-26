@@ -40,8 +40,10 @@ export interface PostDetails {
 	noise?: string;
 	what?: string;
 	hours?: string;
-	/** Boende: utcheckningsdag (ÅÅÅÅ-MM-DD). Inläggets dag är incheckningen. */
+	/** Övernattning över flera nätter: utcheckningsdag (ÅÅÅÅ-MM-DD). Inläggets dag är incheckningen. */
 	until?: string;
+	/** Boende (hotell m.m.) i stället för ställplats. */
+	lodging?: boolean;
 	room?: string;
 	/** Boende: måltider som ingår, t.ex. ["Frukost", "Middag"] eller ["All inclusive"]. */
 	meals?: string[];

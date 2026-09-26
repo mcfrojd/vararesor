@@ -264,6 +264,7 @@
 		const d = $state.snapshot(details);
 		if (k === 'overnight' && stayMode)
 			return {
+				lodging: true,
 				until: d.until,
 				room: d.room?.trim(),
 				meals: d.meals ?? [],
@@ -271,6 +272,8 @@
 			};
 		if (k === 'overnight')
 			return {
+				// Tomt = en natt.
+				until: d.until || undefined,
 				payment: d.payment?.trim(),
 				facilities: d.facilities ?? [],
 				surface: d.surface?.trim(),
@@ -297,7 +300,7 @@
 			}
 			location = parsed;
 		}
-		if (stayMode && (!details.until || details.until <= day)) {
+		if (kind === 'overnight' && (stayMode || details.until) && (!details.until || details.until <= day)) {
 			errors = { until: 'Utcheckningen måste vara efter incheckningen.' };
 			return;
 		}
@@ -566,6 +569,33 @@
 			{/if}
 
 			{#if kind === 'overnight' && !stayMode}
+				<!-- Flera nätter på samma ställe: utcheckning är frivillig, tomt = en natt. -->
+				<div class="space-y-1.5">
+					<label class="block space-y-1.5">
+						<span class="label">Utcheckning</span>
+						<div class="flex gap-2">
+							<input type="date" bind:value={details.until} min={day} class="{input} min-w-0 flex-1" />
+							{#if details.until}
+								<button
+									type="button"
+									onclick={() => (details.until = '')}
+									class="shrink-0 px-2 text-sm font-medium text-muted hover:text-ink"
+								>
+									En natt
+								</button>
+							{/if}
+						</div>
+					</label>
+					{#if errors.until}<p class="text-sm text-red-600">{errors.until}</p>
+					{:else if stayNights > 0}
+						<p class="text-sm text-muted">
+							{nightsLabel(stayNights)}, {formatDay(day)} – {formatDay(details.until ?? '')}
+						</p>
+					{:else}
+						<p class="text-xs text-muted">Lämna tomt för en natt.</p>
+					{/if}
+				</div>
+
 				<fieldset>
 					<legend class="label mb-2">Faciliteter</legend>
 					<div class="flex flex-wrap gap-2">

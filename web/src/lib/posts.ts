@@ -59,7 +59,8 @@ export const postKinds: Record<PostKind, KindConfig> = {
 
 /**
  * Boende (övernattning på resor som inte är husbilsresor): hotell och liknande.
- * Ett boende kan gälla flera nätter, från inläggets dag till `details.until`.
+ * Alla övernattningar kan gälla flera nätter, från inläggets dag till
+ * `details.until` (se multiNight); boende är det som har egen mall.
  */
 export const stayConfig: KindConfig = {
 	label: 'Boende',
@@ -74,7 +75,12 @@ export const stayConfig: KindConfig = {
 
 /** Övernattningen är ett boende (hotell m.m.), inte en ställplats. */
 export function isStay(p: Pick<Post, 'kind' | 'category' | 'details'>): boolean {
-	return p.kind === 'overnight' && (!!p.details?.until || stayConfig.categories.includes(p.category));
+	return p.kind === 'overnight' && (!!p.details?.lodging || stayConfig.categories.includes(p.category));
+}
+
+/** Övernattning (ställplats eller boende) över mer än en natt. */
+export function multiNight(p: Pick<Post, 'kind' | 'day' | 'details'>): boolean {
+	return p.kind === 'overnight' && !!p.details?.until && p.details.until.slice(0, 10) > p.day.slice(0, 10);
 }
 
 /** Mallen för inlägget: boende har egen ikon och egna namn. */
