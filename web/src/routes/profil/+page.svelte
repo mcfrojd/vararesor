@@ -168,6 +168,10 @@
 		</p>
 	</section>
 
+	<a href="/profil/bildplats" class="mt-4 block text-center text-sm text-muted underline hover:text-ink">
+		Testa om bildernas plats följer med
+	</a>
+
 	<button type="button" onclick={signOut} class="btn-ghost mt-6 w-full text-rust">
 		<Icon name="logout" class="h-5 w-5" />
 		Logga ut
