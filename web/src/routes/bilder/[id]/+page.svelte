@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { auth } from '$lib/auth.svelte';
+	import Avatar from '$lib/Avatar.svelte';
 	import BackLink from '$lib/BackLink.svelte';
 	import { dayNumber, formatDateRange, formatDay } from '$lib/format';
 	import Icon from '$lib/Icon.svelte';
@@ -171,6 +172,13 @@
 			selectable={canDelete}
 			bind:selected
 		>
+			{#snippet corner(photo)}
+				{#if trip && photo.expand?.author}
+					<span class="block rounded-full shadow-md ring-2 ring-white">
+						<Avatar user={photo.expand.author} size="h-6 w-6 text-[9px]" />
+					</span>
+				{/if}
+			{/snippet}
 			{#snippet actions(photo)}
 				{#if canDelete(photo)}
 					<button type="button" class={round} disabled={busy} onclick={() => remove([photo.id])} aria-label="Ta bort bilden">

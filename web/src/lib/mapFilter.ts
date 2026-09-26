@@ -7,6 +7,8 @@ export interface MapFilter {
 	kinds: PostKind[];
 	tracks: boolean;
 	photos: boolean;
+	/** Resor som är avstängda. Nya resor syns alltså tills man stänger av dem. */
+	hiddenTrips: string[];
 	range: RangePreset;
 	/** Bara för range = 'custom'. ÅÅÅÅ-MM-DD, tomt = öppet. */
 	from: string;
@@ -26,6 +28,7 @@ export function defaultFilter(): MapFilter {
 		kinds: ['overnight', 'food', 'sight', 'note'],
 		tracks: true,
 		photos: true,
+		hiddenTrips: [],
 		range: 'all',
 		from: '',
 		to: ''
@@ -44,22 +47,26 @@ export function inRange(day: string, r: { from: string; to: string }): boolean {
 	return (!r.from || d >= r.from) && (!r.to || d <= r.to);
 }
 
+export function tripShown(f: MapFilter, trip: string): boolean {
+	return !f.hiddenTrips.includes(trip);
+}
+
 export function filterPosts<T extends Post>(posts: T[], f: MapFilter): T[] {
 	const r = filterRange(f);
-	return posts.filter((p) => f.kinds.includes(p.kind) && inRange(p.day, r));
+	return posts.filter((p) => f.kinds.includes(p.kind) && tripShown(f, p.trip) && inRange(p.day, r));
 }
 
-/** Bilderna inom perioden (alla, oavsett om de visas), för siffran på knappen. */
-export function photosInRange<T extends Pick<Photo, 'day'>>(photos: T[], f: MapFilter): T[] {
+/** Bilderna inom perioden och de valda resorna (oavsett om bilder visas), för siffran på knappen. */
+export function photosInRange<T extends Pick<Photo, 'day' | 'trip'>>(photos: T[], f: MapFilter): T[] {
 	const r = filterRange(f);
-	return photos.filter((p) => inRange(p.day, r));
+	return photos.filter((p) => tripShown(f, p.trip) && inRange(p.day, r));
 }
 
-/** Antal inlägg per typ inom datumintervallet (för siffrorna på knapparna). */
+/** Antal inlägg per typ inom datumintervallet och de valda resorna (för siffrorna på knapparna). */
 export function countByKind(posts: Post[], f: MapFilter): Record<PostKind, number> {
 	const r = filterRange(f);
 	const counts: Record<PostKind, number> = { overnight: 0, food: 0, sight: 0, note: 0 };
-	for (const p of posts) if (inRange(p.day, r)) counts[p.kind]++;
+	for (const p of posts) if (tripShown(f, p.trip) && inRange(p.day, r)) counts[p.kind]++;
 	return counts;
 }
 

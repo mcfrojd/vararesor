@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { rangePresets, type MapFilter } from './mapFilter';
-	import type { PostKind } from './pb';
+	import type { PostKind, Trip } from './pb';
 	import { postKinds } from './posts';
 
 	let {
 		filter = $bindable(),
 		counts,
 		photoCount = 0,
-		tracksAvailable = false
+		tracksAvailable = false,
+		trips = []
 	}: {
 		filter: MapFilter;
 		counts: Record<PostKind, number>;
@@ -15,7 +16,17 @@
 		photoCount?: number;
 		/** Visa knappen för GPS-spår (bara när det finns spår att visa). */
 		tracksAvailable?: boolean;
+		/** Resor att välja bland (de som har något att visa). Knapparna visas vid fler än en. */
+		trips?: Pick<Trip, 'id' | 'title'>[];
 	} = $props();
+
+	function toggleTrip(id: string) {
+		filter.hiddenTrips = filter.hiddenTrips.includes(id)
+			? filter.hiddenTrips.filter((x) => x !== id)
+			: [...filter.hiddenTrips, id];
+	}
+	const allTrips = $derived(trips.every((t) => !filter.hiddenTrips.includes(t.id)));
+	const noTrips = $derived(trips.every((t) => filter.hiddenTrips.includes(t.id)));
 
 	// Kortare namn på knapparna än i mallarna.
 	const short: Record<PostKind, string> = {
@@ -75,6 +86,36 @@
 			</button>
 		{/if}
 	</div>
+
+	{#if trips.length > 1}
+		<!-- "Ingen" och sedan en resa: snabbaste sättet att se bara den. -->
+		<div
+			class="no-scrollbar -mx-4 flex items-center gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0"
+			role="group"
+			aria-label="Resor"
+		>
+			<span class="label shrink-0">Resor</span>
+			<button type="button" aria-pressed={allTrips} onclick={() => (filter.hiddenTrips = [])} class="chip">Alla</button>
+			<button
+				type="button"
+				aria-pressed={noTrips}
+				onclick={() => (filter.hiddenTrips = trips.map((t) => t.id))}
+				class="chip"
+			>
+				Ingen
+			</button>
+			{#each trips as t (t.id)}
+				<button
+					type="button"
+					aria-pressed={!filter.hiddenTrips.includes(t.id)}
+					onclick={() => toggleTrip(t.id)}
+					class="chip shrink-0 whitespace-nowrap"
+				>
+					{t.title}
+				</button>
+			{/each}
+		</div>
+	{/if}
 
 	<div class="flex flex-wrap items-center gap-1" role="group" aria-label="Tidsperiod">
 		{#each rangePresets as r (r.value)}

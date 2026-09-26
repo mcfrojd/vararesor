@@ -7,7 +7,7 @@ export async function load({ params }) {
 		if (params.id === 'okategoriserat') {
 			const [trips, photos] = await Promise.all([
 				pb.collection('trips').getFullList<Trip>({ sort: '-start_date' }),
-				pb.collection('photos').getFullList<Photo>({ filter: 'trip = ""', sort: 'day,taken,created' })
+				pb.collection('photos').getFullList<Photo>({ filter: 'trip = ""', sort: 'day,taken,created', expand: 'author' })
 			]);
 			return { trip: null, trips, photos };
 		}
@@ -15,7 +15,9 @@ export async function load({ params }) {
 			pb.collection('trips').getOne<Trip>(params.id),
 			pb.collection('photos').getFullList<Photo>({
 				filter: pb.filter('trip = {:trip}', { trip: params.id }),
-				sort: 'day,taken,created'
+				sort: 'day,taken,created',
+				// Vem som laddat upp bilden, i hörnet på miniatyren.
+				expand: 'author'
 			})
 		]);
 		return { trip, trips: [] as Trip[], photos };

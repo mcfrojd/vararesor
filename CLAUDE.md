@@ -37,7 +37,7 @@ Klart:
 - Resor (`trips`): skapa, visa, redigera, ta bort, omslagsbild och deltagare. Bara ägare/deltagare ser, bara ägaren ändrar.
 - Dagar och inlägg (`posts`) med mallar: övernattning, mat och dryck, sevärdhet, anteckning. Dagarna räknas fram ur resans datum.
 - Karta (MapLibre + OpenFreeMap, ingen nyckel) på resa, inlägg och `/karta`, med Doris GPS-spår och filter för typ, spår och period.
-- Tid på inlägg, startsida med pågående/kommande/tidigare resor, kalender (`/kalender`).
+- Tid på inlägg, startsida med pågående/kommande/tidigare resor, kalender (`/kalender`). Flikraden: Resor, Bilder, Kalender, Karta; profilen (med statistik) nås via profilbilden uppe till höger.
 - Väder per inlägg från Open-Meteo via `pocketbase/pb_hooks/weather.js` (hookar i `weather.pb.js`, timjobb `weather`). Hookar körs isolerat: delad kod via `require(`${__hooks}/weather.js`)`. Spara utan nya hookar med `app.unsafeWithoutHooks().save()`.
 - Utseende i stil med jorial.app: se klasserna i `web/src/app.css` (`card`, `field`, `label`, `chip`, `title`, `btn-*`) och komponenterna `Icon`, `Fab`, `BackLink`. Använd dem i stället för egna Tailwind-kombinationer.
 - S3 (Garage på Synology via Tailscale) för filer och backup, styrt av `.env` via `pocketbase/pb_hooks/storage.pb.js`. Den riktiga appen (port 8090, `pb_data/`, `.env`) använder `vararesor-media` och `vararesor-backup`. Testmiljön (`docker-compose.test.yml`, port 8091, `pb_data_test/`, `.env.test`) använder `vararesor-test` och ingen S3-backup. Ändra aldrig S3 i admin-gränssnittet när `S3_ENDPOINT` är satt: det skrivs över vid omstart.

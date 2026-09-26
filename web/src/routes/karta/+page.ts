@@ -8,7 +8,7 @@ export async function load() {
 			sort: 'day,created',
 			expand: 'trip'
 		}),
-		pb.collection('trips').getFullList<Trip>({ filter: 'type = "husbil" && start_date != ""' }),
+		pb.collection('trips').getFullList<Trip>({ sort: '-start_date' }),
 		// Bilder med egen position, eller vars inlägg har en.
 		pb.collection('photos').getFullList<Photo & { expand?: { post?: Post; trip?: Trip } }>({
 			filter:
@@ -17,5 +17,10 @@ export async function load() {
 			expand: 'post,trip'
 		})
 	]);
-	return { posts: sortPosts(posts), husbilTrips: trips, photos };
+	return {
+		posts: sortPosts(posts),
+		trips,
+		husbilTrips: trips.filter((t) => t.type === 'husbil' && t.start_date),
+		photos
+	};
 }

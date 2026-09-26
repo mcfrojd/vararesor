@@ -4,12 +4,14 @@
 	import { offline, type PendingPhoto } from './offline.svelte';
 	import type { Photo } from './pb';
 	import { photoUrl, sortPhotos } from './photos';
+	import { hasLocation } from './posts';
 
 	let {
 		photos,
 		pending,
 		compact = false,
 		actions,
+		corner,
 		selecting = false,
 		selectable = () => true,
 		selected = $bindable([])
@@ -21,6 +23,8 @@
 		pending: (p: PendingPhoto) => boolean;
 		/** Knappar i visningen för den uppladdade bild som visas (t.ex. "Använd som omslag"). */
 		actions?: Snippet<[Photo]>;
+		/** Något litet i hörnet på varje miniatyr (t.ex. vem som laddat upp bilden). */
+		corner?: Snippet<[Photo]>;
 		/** Välj-läge: ett tryck markerar bilden i stället för att visa den. */
 		selecting?: boolean;
 		/** Vilka bilder som går att välja (t.ex. bara de man får ta bort). */
@@ -38,6 +42,9 @@
 		taken: string;
 		pending: boolean;
 		canSelect?: boolean;
+		/** Google Maps för bildens egen position (GPS eller Doris spår), annars tomt. */
+		maps: string;
+		photo?: Photo;
 	}
 
 	function toggle(id: string) {
@@ -48,6 +55,10 @@
 		...sortPhotos(photos).map((p) => ({
 			id: p.id,
 			canSelect: selectable(p),
+			maps: hasLocation(p.location)
+				? `https://www.google.com/maps/search/?api=1&query=${p.location.lat},${p.location.lon}`
+				: '',
+			photo: p,
 			thumb: photoUrl(p, 'thumb'),
 			web: photoUrl(p, 'web'),
 			original: p.original ? photoUrl(p, 'original') : '',
@@ -56,7 +67,7 @@
 		})),
 		...offline.photos
 			.filter((p) => pending(p) && !photos.some((x) => x.id === p.id))
-			.map((p) => ({ id: p.id, thumb: p.thumbUrl, web: p.thumbUrl, original: '', taken: '', pending: true }))
+			.map((p) => ({ id: p.id, thumb: p.thumbUrl, web: p.thumbUrl, original: '', taken: '', pending: true, maps: '' }))
 	]);
 
 	let open = $state<number | null>(null);
@@ -146,6 +157,9 @@
 						<img src={big ? p.web : p.thumb} alt="" loading="lazy" class="h-full w-full object-cover" />
 					</button>
 				{/if}
+				{#if corner && p.photo && !selecting}
+					<span class="pointer-events-none absolute bottom-1 left-1">{@render corner(p.photo)}</span>
+				{/if}
 				{#if p.pending}
 					<span class="absolute bottom-1.5 left-1.5 rounded-full bg-ink/70 px-2 py-0.5 text-[10px] font-semibold text-paper">
 						Väntar på nät
@@ -161,9 +175,11 @@
 		<div class="flex items-center justify-between gap-3 p-3 text-sm text-white/80">
 			<span>{open + 1} / {all.length}{current.taken ? ` · ${current.taken.slice(11)}` : ''}</span>
 			<div class="flex items-center gap-2">
-				{#if actions && !current.pending}
-					{@const photo = photos.find((p) => p.id === current.id)}
-					{#if photo}{@render actions(photo)}{/if}
+				{#if actions && current.photo}{@render actions(current.photo)}{/if}
+				{#if current.maps}
+					<a href={current.maps} target="_blank" rel="noopener" class={round} aria-label="Visa platsen i Google Maps" title="Visa platsen i Google Maps">
+						<Icon name="map" class="h-5 w-5" />
+					</a>
 				{/if}
 				{#if current.original}
 					<a href={current.original} target="_blank" rel="noopener" class={round} aria-label="Öppna originalet">

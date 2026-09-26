@@ -8,7 +8,8 @@
 		inRange,
 		loadFilter,
 		photosInRange,
-		saveFilter
+		saveFilter,
+		tripShown
 	} from '$lib/mapFilter';
 	import { mapPoints, photoPoints } from '$lib/posts';
 	import { loadDorisTracks, type Line } from '$lib/tracks';
@@ -36,6 +37,16 @@
 	]);
 	const counts = $derived(countByKind(data.posts, filter));
 
+	// Resorna som har något att visa (inlägg, bilder eller spår), nyast först.
+	const tripChoices = $derived(
+		data.trips.filter(
+			(t) =>
+				data.posts.some((p) => p.trip === t.id) ||
+				data.photos.some((p) => p.trip === t.id) ||
+				data.husbilTrips.some((h) => h.id === t.id)
+		)
+	);
+
 	// GPS-spår för husbilsresornas dagar inom perioden. Spåren kommer dagen
 	// efter, så i dag hoppas över. Högst MAX_TRACK_DAYS dagar (de senaste).
 	const MAX_TRACK_DAYS = 60;
@@ -43,7 +54,7 @@
 		const r = filterRange(filter);
 		const t = today();
 		const days = new Set(
-			data.husbilTrips.flatMap((trip) =>
+			data.husbilTrips.filter((trip) => tripShown(filter, trip.id)).flatMap((trip) =>
 				tripDays(trip.start_date, trip.end_date, []).filter((d) => d < t && inRange(d, r))
 			)
 		);
@@ -79,7 +90,9 @@
 	</div>
 {:else}
 	<div class="mb-4">
-		<MapFilter bind:filter {counts} photoCount={photosShown.length} tracksAvailable={data.husbilTrips.length > 0} />
+		<MapFilter bind:filter {counts} photoCount={photosShown.length} tracksAvailable={data.husbilTrips.length > 0}
+			trips={tripChoices}
+		/>
 	</div>
 	<TripMap {points} {tracks} class="h-[65dvh]" />
 	{#if filter.tracks && tooManyTrackDays}

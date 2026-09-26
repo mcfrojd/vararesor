@@ -93,6 +93,10 @@ export interface Photo {
 	web: string;
 	thumb: string;
 	created: string;
+	expand?: {
+		/** Den som laddat upp bilden, när den hämtats med expand. */
+		author?: User;
+	};
 }
 
 export interface User {

@@ -5,6 +5,40 @@
 	import { clearOfflineData, isNetworkError, offline, timeout, waitingLabel } from '$lib/offline.svelte';
 	import { pb, type User } from '$lib/pb';
 	import { prepareAvatar } from '$lib/photos';
+	import { dayNumber, today, tripStatus, tripTypes } from '$lib/format';
+
+	let { data } = $props();
+
+	const stats = $derived.by(() => {
+		const s = data.stats;
+		if (!s) return null;
+		const t = today();
+		const started = s.trips.filter((trip) => trip.start_date && tripStatus(trip.start_date, trip.end_date) !== 'upcoming');
+		// Dagar på resor som gjorts eller pågår, fram till i dag.
+		const days = started.reduce((sum, trip) => {
+			const end = trip.end_date && trip.end_date.slice(0, 10) < t ? trip.end_date : t;
+			return sum + dayNumber(trip.start_date, end);
+		}, 0);
+		const byType = Object.entries(tripTypes)
+			.map(([type, info]) => {
+				const n = started.filter((trip) => trip.type === type).length;
+				const word = { husbil: ['husbilsresa', 'husbilsresor'], semester: ['semester', 'semestrar'], egen: ['egen resa', 'egna resor'] }[type]!;
+				return { icon: info.icon, n, label: word[n === 1 ? 0 : 1] };
+			})
+			.filter((x) => x.n > 0);
+		return {
+			tiles: [
+				{ icon: '📷', n: s.photos, label: s.photos === 1 ? 'uppladdad bild' : 'uppladdade bilder' },
+				{ icon: '✍️', n: s.posts, label: 'inlägg' },
+				{ icon: '🗺️', n: s.trips.filter((trip) => trip.owner === s.me).length, label: 'upplagda resor' },
+				{ icon: '✅', n: s.trips.filter((trip) => tripStatus(trip.start_date, trip.end_date) === 'past' && trip.start_date).length, label: 'gjorda resor' },
+				{ icon: '📅', n: days, label: days === 1 ? 'resdag' : 'resdagar' },
+				{ icon: '🛏️', n: s.overnights, label: s.overnights === 1 ? 'övernattning' : 'övernattningar' }
+			],
+			byType,
+			upcoming: s.trips.filter((trip) => tripStatus(trip.start_date, trip.end_date) === 'upcoming').length
+		};
+	});
 
 	const waiting = $derived(waitingLabel());
 
@@ -95,6 +129,30 @@
 		</div>
 		{#if avatarError}<p class="mt-3 text-sm text-red-600" role="alert">{avatarError}</p>{/if}
 	</section>
+
+	{#if stats}
+		<section class="mt-4" aria-labelledby="stats-rubrik">
+			<h2 id="stats-rubrik" class="label mb-2">I siffror</h2>
+			<ul class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+				{#each stats.tiles as tile (tile.label)}
+					<li class="card p-4">
+						<p class="text-2xl" aria-hidden="true">{tile.icon}</p>
+						<p class="title mt-1 text-3xl leading-none">{tile.n.toLocaleString('sv-SE')}</p>
+						<p class="mt-1 text-sm text-muted">{tile.label}</p>
+					</li>
+				{/each}
+			</ul>
+			{#if stats.byType.length > 0 || stats.upcoming > 0}
+				<p class="mt-3 text-sm text-muted">
+					{stats.byType.map((x) => `${x.icon} ${x.n} ${x.label}`).join(' · ')}
+					{#if stats.upcoming > 0}{stats.byType.length ? ' · ' : ''}{stats.upcoming} på gång{/if}
+				</p>
+			{/if}
+			<p class="mt-1 text-xs text-muted">
+				Bilder och inlägg är dina egna. Resor, dagar och övernattningar gäller alla resor du är med på.
+			</p>
+		</section>
+	{/if}
 
 	<section class="card mt-4 space-y-1 p-5">
 		<p class="label">Synk</p>

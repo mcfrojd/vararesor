@@ -49,8 +49,7 @@
 		{ href: '/', label: 'Resor', icon: 'journal', match: (p) => p === '/' || p.startsWith('/trips') },
 		{ href: '/bilder', label: 'Bilder', icon: 'image', match: (p) => p.startsWith('/bilder') },
 		{ href: '/kalender', label: 'Kalender', icon: 'calendar', match: (p) => p.startsWith('/kalender') },
-		{ href: '/karta', label: 'Karta', icon: 'map', match: (p) => p.startsWith('/karta') },
-		{ href: '/profil', label: 'Profil', icon: 'user', match: (p) => p.startsWith('/profil') }
+		{ href: '/karta', label: 'Karta', icon: 'map', match: (p) => p.startsWith('/karta') }
 	];
 </script>
 
@@ -66,7 +65,13 @@
 				<img src="/favicon.svg" alt="" class="h-8 w-8 rounded-xl" />
 				<span class="font-serif text-xl font-medium tracking-tight text-ink">Våra resor</span>
 			</a>
-			<a href="/profil" aria-label="Profil" class="rounded-full">
+			<!-- Profilen nås via bilden (ingen egen flik); en ring visar när man är där. -->
+			<a
+				href="/profil"
+				aria-label="Profil"
+				aria-current={path.startsWith('/profil') ? 'page' : undefined}
+				class="rounded-full ring-offset-2 ring-offset-card {path.startsWith('/profil') ? 'ring-2 ring-rust' : ''}"
+			>
 				<Avatar user={auth.user} size="h-8 w-8 text-[10px]" />
 			</a>
 		</div>
@@ -104,7 +109,7 @@
 		style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom))"
 	>
 		<div
-			class="mx-auto grid max-w-lg grid-cols-5 gap-0.5 rounded-3xl border border-line bg-card/90 p-1.5 shadow-card backdrop-blur-md"
+			class="mx-auto grid max-w-md grid-cols-4 gap-1 rounded-3xl border border-line bg-card/90 p-1.5 shadow-card backdrop-blur-md"
 		>
 			{#each tabs as tab (tab.href)}
 				{@const active = tab.match(path)}
