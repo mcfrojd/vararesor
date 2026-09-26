@@ -40,6 +40,10 @@ export interface PostDetails {
 	noise?: string;
 	what?: string;
 	hours?: string;
+	/** Boende: utcheckningsdag (ÅÅÅÅ-MM-DD). Inläggets dag är incheckningen. */
+	until?: string;
+	room?: string;
+	breakfast?: boolean;
 }
 
 export interface Post {

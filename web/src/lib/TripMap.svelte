@@ -6,6 +6,8 @@
 		lat: number;
 		lon: number;
 		kind: PostKind | 'photo';
+		/** Ikon om den skiljer sig från typens (t.ex. boende). */
+		icon?: string;
 		title: string;
 		subtitle: string;
 		href: string;
@@ -145,7 +147,7 @@
 		}
 		face.className =
 			'flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-card text-lg shadow-md transition-transform group-hover:scale-110';
-		face.textContent = p.kind === 'photo' ? '📷' : postKinds[p.kind].icon;
+		face.textContent = p.icon ?? (p.kind === 'photo' ? '📷' : postKinds[p.kind].icon);
 		return el;
 	}
 

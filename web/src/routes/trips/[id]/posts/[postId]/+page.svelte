@@ -4,7 +4,7 @@
 	import Avatar from '$lib/Avatar.svelte';
 	import { dayNumber, formatDay } from '$lib/format';
 	import { pb } from '$lib/pb';
-	import { formatLocation, hasLocation, mapUrl, postKinds } from '$lib/posts';
+	import { formatLocation, hasLocation, kindOf, mapUrl, nights, nightsLabel } from '$lib/posts';
 	import Stars from '$lib/Stars.svelte';
 	import { mapPoints } from '$lib/posts';
 	import TripMap from '$lib/TripMap.svelte';
@@ -17,7 +17,7 @@
 
 	const trip = $derived(data.trip);
 	const post = $derived(data.post);
-	const k = $derived(postKinds[post.kind]);
+	const k = $derived(kindOf(post));
 	const n = $derived(dayNumber(trip.start_date, post.day));
 	const d = $derived(post.details ?? {});
 	const isAuthor = $derived(post.author === auth.user?.id);
@@ -26,6 +26,9 @@
 	// Mallfälten som har ett värde, i den ordning de visas.
 	const facts = $derived(
 		[
+			['Utcheckning', d.until ? `${formatDay(d.until)} (${nightsLabel(nights(post))})` : ''],
+			['Rum', d.room],
+			['Frukost', d.breakfast ? 'Ingår' : ''],
 			['Vad vi åt och drack', d.what],
 			[k.priceLabel ?? 'Pris', post.price],
 			['Betalsätt', d.payment],

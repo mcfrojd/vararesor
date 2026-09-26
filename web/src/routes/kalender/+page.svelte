@@ -16,7 +16,7 @@
 	import type { Post, Trip } from '$lib/pb';
 	import PostCard from '$lib/PostCard.svelte';
 	import PhotoGallery from '$lib/PhotoGallery.svelte';
-	import { postKinds } from '$lib/posts';
+	import { kindOf } from '$lib/posts';
 	import { dayWeather, weatherInfo } from '$lib/weather';
 	import WeatherPill from '$lib/WeatherPill.svelte';
 
@@ -65,7 +65,7 @@
 
 	/** Små ikoner för dagens inlägg: en per typ, högst tre. */
 	function kindIcons(posts: Post[], photos = false): string[] {
-		return [...new Set([...posts.map((p) => postKinds[p.kind].icon), ...(photos ? ['📷'] : [])])].slice(0, 3);
+		return [...new Set([...posts.map((p) => kindOf(p).icon), ...(photos ? ['📷'] : [])])].slice(0, 3);
 	}
 </script>
 

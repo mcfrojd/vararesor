@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { auth } from './auth.svelte';
-	import { nowTime, today, toDateInput } from './format';
+	import { daysBefore, formatDay, nowTime, today, toDateInput } from './format';
 	import {
 		attachPhotos,
 		enqueue,
@@ -12,14 +12,27 @@
 	} from './offline.svelte';
 	import { photoUrl, type PreparedPhoto } from './photos';
 	import PhotoPicker from './PhotoPicker.svelte';
-	import { fieldErrors, pb, type GeoPoint, type Photo, type Post, type PostDetails, type PostKind } from './pb';
+	import {
+		fieldErrors,
+		pb,
+		type GeoPoint,
+		type Photo,
+		type Post,
+		type PostDetails,
+		type PostKind,
+		type Trip
+	} from './pb';
 	import {
 		facilities,
 		formatLocation,
 		hasLocation,
+		isStay,
+		nights,
+		nightsLabel,
 		noiseLevels,
 		parseLocation,
-		postKinds
+		postKinds,
+		stayConfig
 	} from './posts';
 	import Icon from './Icon.svelte';
 	import Stars from './Stars.svelte';
@@ -30,6 +43,7 @@
 		kind: initialKind,
 		day: initialDay,
 		dayPhotos = [],
+		trip,
 		onsaved,
 		oncancel
 	}: {
@@ -39,6 +53,8 @@
 		day: string;
 		/** Resans bilder som bara hör till en dag. De för inläggets dag kan läggas i inlägget. */
 		dayPhotos?: Photo[];
+		/** Resans typ och slut: övernattning är ett boende (hotell m.m.) utom på husbilsresor. */
+		trip?: Pick<Trip, 'type' | 'end_date'>;
 		/** `queued` = sparat på enheten, skickas när nätet är tillbaka. */
 		onsaved: (post: Pick<Post, 'id' | 'day'>, queued?: boolean) => void;
 		oncancel: () => void;
@@ -70,6 +86,21 @@
 	// servern fylla i från Doris spår.
 	let locationSource = $state<NonNullable<Post['location_source']>>(initial?.location_source ?? '');
 	let details = $state<PostDetails>({ facilities: [], ...(initial?.details ?? {}) });
+
+	// Boende i stället för ställplats: på resor som inte är husbilsresor, eller
+	// om inlägget redan är ett boende.
+	// svelte-ignore state_referenced_locally
+	const stayTrip = (trip?.type ?? 'husbil') !== 'husbil';
+	const stayMode = $derived(kind === 'overnight' && (initial ? isStay(initial) || stayTrip : stayTrip));
+
+	/** Förvald utcheckning: resans sista dag (boende för hela resan), annars dagen efter. */
+	function defaultUntil(checkIn: string): string {
+		const end = trip?.end_date ? toDateInput(trip.end_date) : '';
+		return end && end > checkIn ? end : daysBefore(checkIn, -1);
+	}
+	// svelte-ignore state_referenced_locally
+	if (!details.until && stayTrip) details.until = defaultUntil(day);
+	const stayNights = $derived(details.until ? nights({ day, details }) : 0);
 
 	// Id för ett nytt inlägg bestäms en gång, så att ett nytt försök efter ett fel
 	// inte skapar en dubblett.
@@ -142,7 +173,7 @@
 	let errors = $state<Record<string, string>>({});
 	let busy = $state(false);
 
-	const config = $derived(kind ? postKinds[kind] : undefined);
+	const config = $derived(kind ? (stayMode ? stayConfig : postKinds[kind]) : undefined);
 	const mapsUrl = $derived.by(() => {
 		const at = locationText.trim() ? parseLocation(locationText) : null;
 		return at ? `https://www.google.com/maps/search/?api=1&query=${at.lat},${at.lon}` : '';
@@ -177,6 +208,13 @@
 	/** Behåller bara fälten som hör till vald typ, så att inget gammalt skräp sparas. */
 	function cleanDetails(k: PostKind): PostDetails {
 		const d = $state.snapshot(details);
+		if (k === 'overnight' && stayMode)
+			return {
+				until: d.until,
+				room: d.room?.trim(),
+				breakfast: !!d.breakfast,
+				payment: d.payment?.trim()
+			};
 		if (k === 'overnight')
 			return {
 				payment: d.payment?.trim(),
@@ -203,6 +241,10 @@
 				return;
 			}
 			location = parsed;
+		}
+		if (stayMode && (!details.until || details.until <= day)) {
+			errors = { until: 'Utcheckningen måste vara efter incheckningen.' };
+			return;
 		}
 		if (!title.trim() && !body.trim()) {
 			errors = { title: kind === 'note' ? 'Skriv något.' : 'Fyll i ett namn.' };
@@ -290,8 +332,8 @@
 				onclick={() => (kind = value as PostKind)}
 				class="card flex flex-col items-center gap-2 px-3 py-7 transition hover:-translate-y-0.5 hover:shadow-card"
 			>
-				<span class="text-4xl">{k.icon}</span>
-				<span class="font-semibold text-ink">{k.label}</span>
+				<span class="text-4xl">{value === 'overnight' && stayTrip ? stayConfig.icon : k.icon}</span>
+				<span class="font-semibold text-ink">{value === 'overnight' && stayTrip ? stayConfig.label : k.label}</span>
 			</button>
 		{/each}
 	</div>
@@ -359,7 +401,7 @@
 		<div class="card space-y-5 p-5">
 			<div class="grid grid-cols-[3fr_2fr] gap-3">
 				<label class="block space-y-1.5">
-					<span class="label">Dag</span>
+					<span class="label">{stayMode ? 'Incheckning' : 'Dag'}</span>
 					<input type="date" required bind:value={day} onchange={changeDay} class="{input} min-w-0" />
 				</label>
 				<label class="block space-y-1.5">
@@ -433,7 +475,36 @@
 				</label>
 			{/if}
 
-			{#if kind === 'overnight'}
+			{#if stayMode}
+				<div class="grid grid-cols-2 gap-3">
+					<label class="block space-y-1.5">
+						<span class="label">Utcheckning</span>
+						<input type="date" bind:value={details.until} min={day} class="{input} min-w-0" />
+					</label>
+					<label class="block space-y-1.5">
+						<span class="label">Rum</span>
+						<input bind:value={details.room} placeholder="t.ex. dubbelrum, 214" class={input} />
+					</label>
+				</div>
+				{#if errors.until}<p class="-mt-3 text-sm text-red-600">{errors.until}</p>
+				{:else if stayNights > 0}
+					<p class="-mt-3 text-sm text-muted">
+						{nightsLabel(stayNights)}, {formatDay(day)} – {formatDay(details.until ?? '')}
+					</p>
+				{/if}
+				<div>
+					<button
+						type="button"
+						aria-pressed={!!details.breakfast}
+						onclick={() => (details.breakfast = !details.breakfast)}
+						class="chip"
+					>
+						☕ Frukost ingår
+					</button>
+				</div>
+			{/if}
+
+			{#if kind === 'overnight' && !stayMode}
 				<fieldset>
 					<legend class="label mb-2">Faciliteter</legend>
 					<div class="flex flex-wrap gap-2">

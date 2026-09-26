@@ -57,6 +57,39 @@ export const postKinds: Record<PostKind, KindConfig> = {
 	}
 };
 
+/**
+ * Boende (övernattning på resor som inte är husbilsresor): hotell och liknande.
+ * Ett boende kan gälla flera nätter, från inläggets dag till `details.until`.
+ */
+export const stayConfig: KindConfig = {
+	label: 'Boende',
+	icon: '🏨',
+	titleLabel: 'Namn på boendet',
+	categories: ['Hotell', 'Motell', 'Vandrarhem', 'Lägenhet', 'Stuga', 'Hos vänner/släkt', 'Annat'],
+	priceLabel: 'Pris',
+	rated: true,
+	located: true,
+	bodyLabel: 'Anteckning'
+};
+
+/** Övernattningen är ett boende (hotell m.m.), inte en ställplats. */
+export function isStay(p: Pick<Post, 'kind' | 'category' | 'details'>): boolean {
+	return p.kind === 'overnight' && (!!p.details?.until || stayConfig.categories.includes(p.category));
+}
+
+/** Mallen för inlägget: boende har egen ikon och egna namn. */
+export function kindOf(p: Pick<Post, 'kind' | 'category' | 'details'>): KindConfig {
+	return isStay(p) ? stayConfig : postKinds[p.kind];
+}
+
+/** Antal nätter på ett boende, eller 0. */
+export function nights(p: Pick<Post, 'day' | 'details'>): number {
+	const until = p.details?.until;
+	return until ? Math.max(0, dayNumber(p.day, until) - 1) : 0;
+}
+
+export const nightsLabel = (n: number) => (n === 1 ? '1 natt' : `${n} nätter`);
+
 export const facilities = ['El', 'Vatten', 'Gråvattentömning', 'Toatömning', 'Toalett', 'Dusch', 'WiFi'];
 export const noiseLevels = ['Lugnt', 'Visst ljud', 'Högljutt'];
 
@@ -145,7 +178,8 @@ export function mapPoints(posts: Post[], tripStart = '', tripTitle = ''): MapPoi
 			lat: p.location.lat,
 			lon: p.location.lon,
 			kind: p.kind,
-			title: p.title || postKinds[p.kind].label,
+			icon: kindOf(p).icon,
+			title: p.title || kindOf(p).label,
 			subtitle: [tripTitle, n ? `Dag ${n}` : '', formatDay(p.day)].filter(Boolean).join(' · '),
 			href: `/trips/${p.trip}/posts/${p.id}`
 		};

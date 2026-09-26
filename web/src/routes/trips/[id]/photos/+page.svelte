@@ -7,7 +7,7 @@
 	import { enqueuePhotos } from '$lib/offline.svelte';
 	import { isDuplicate, suggest, type Destination } from '$lib/photoMatch';
 	import { preparePhoto, type PreparedPhoto } from '$lib/photos';
-	import { postKinds } from '$lib/posts';
+	import { kindOf } from '$lib/posts';
 
 	let { data } = $props();
 
@@ -182,7 +182,7 @@
 						>
 							<option value="">📷 Dagens bilder</option>
 							{#each dayPosts as p (p.id)}
-								<option value={p.id}>{postKinds[p.kind].icon} {p.title || postKinds[p.kind].label}{p.time ? ` (${p.time})` : ''}</option>
+								<option value={p.id}>{kindOf(p).icon} {p.title || kindOf(p).label}{p.time ? ` (${p.time})` : ''}</option>
 							{/each}
 						</select>
 						{#if !it.prepared?.taken}

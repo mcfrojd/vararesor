@@ -4,7 +4,7 @@
 	import { offline } from './offline.svelte';
 	import { photoUrl, sortPhotos } from './photos';
 	import type { Post } from './pb';
-	import { formatLocation, hasLocation, postKinds } from './posts';
+	import { formatLocation, hasLocation, kindOf, nights, nightsLabel } from './posts';
 	import Stars from './Stars.svelte';
 	import WeatherPill from './WeatherPill.svelte';
 
@@ -21,8 +21,11 @@
 		onremove?: () => void;
 	} = $props();
 
-	const k = $derived(postKinds[post.kind]);
-	const subtitle = $derived([post.category || k.label, post.price].filter(Boolean).join(' · '));
+	const k = $derived(kindOf(post));
+	const n = $derived(nights(post));
+	const subtitle = $derived(
+		[post.category || k.label, n ? nightsLabel(n) : '', post.price].filter(Boolean).join(' · ')
+	);
 
 	// Uppladdade bilder följt av de som ligger i kön på den här enheten.
 	// En bild vars små filer skickats men inte originalet finns på båda ställena.

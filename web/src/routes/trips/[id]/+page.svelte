@@ -14,7 +14,15 @@
 		inRange,
 		photosInRange
 	} from '$lib/mapFilter';
-	import { hasLocation, mapPoints, photoLocation, photoPoints, sortPosts } from '$lib/posts';
+	import {
+		hasLocation,
+		isStay,
+		mapPoints,
+		nights,
+		photoLocation,
+		photoPoints,
+		sortPosts
+	} from '$lib/posts';
 	import { loadDorisTracks, type Line } from '$lib/tracks';
 	import TripMap from '$lib/TripMap.svelte';
 	import { dayWeather, tempRange, weatherInfo } from '$lib/weather';
@@ -80,6 +88,11 @@
 		])
 	);
 	const todayDay = today();
+
+	// Boenden över flera nätter visas även på dagarna efter incheckningen.
+	const stays = $derived(allPosts.filter((p) => isStay(p) && p.details?.until));
+	const staysOn = (day: string) =>
+		stays.filter((p) => p.day.slice(0, 10) < day && day <= (p.details?.until ?? ''));
 
 	// Kartan: filter för typ, period och spår. Sparas inte; varje resa börjar med allt.
 	let filter = $state(defaultFilter());
@@ -224,6 +237,18 @@
 							<Icon name="plus" class="h-4 w-4" />Lägg till
 						</a>
 					</div>
+					{#each staysOn(day) as s (s.id)}
+						<a
+							href="/trips/{trip.id}/posts/{s.id}"
+							class="mb-3 flex items-center gap-2 rounded-2xl bg-field px-3.5 py-2 text-sm text-muted transition hover:text-ink"
+						>
+							<span aria-hidden="true">🏨</span>
+							<span>
+								{day === s.details?.until ? 'Utcheckning' : `Natt ${dayNumber(s.day, day)} av ${nights(s)}`} ·
+								<span class="font-semibold text-ink">{s.title || 'Boende'}</span>
+							</span>
+						</a>
+					{/each}
 					{#if posts.length > 0}
 						<ul class="space-y-3">
 							{#each posts as post (post.id)}
