@@ -74,30 +74,38 @@
 		};
 	});
 
+	/**
+	 * MapLibre placerar markören med `transform` på det yttre elementet. Därför
+	 * får bara det inre elementet växa vid hovring: skalas det yttre skalas även
+	 * förflyttningen, och markören hoppar iväg från sin plats.
+	 */
 	function markerElement(p: MapPoint): HTMLElement {
 		const el = document.createElement('button');
 		el.type = 'button';
 		el.setAttribute('aria-label', p.title);
+		el.className = 'group block cursor-pointer';
+		const face = document.createElement('span');
+		el.append(face);
 		if (p.thumb) {
-			el.className =
-				'relative h-11 w-11 rounded-xl border-2 border-white bg-card shadow-md transition hover:scale-110';
+			face.className =
+				'relative block h-11 w-11 rounded-xl border-2 border-white bg-card shadow-md transition-transform group-hover:scale-110';
 			const img = document.createElement('img');
 			img.src = p.thumb;
 			img.alt = '';
 			img.className = 'h-full w-full rounded-[10px] object-cover';
-			el.append(img);
+			face.append(img);
 			if ((p.count ?? 1) > 1) {
 				const badge = document.createElement('span');
 				badge.className =
 					'absolute -right-2 -top-2 min-w-5 rounded-full bg-rust px-1 text-center text-[11px] font-bold leading-5 text-white';
 				badge.textContent = String(p.count);
-				el.append(badge);
+				face.append(badge);
 			}
 			return el;
 		}
-		el.className =
-			'flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-card text-lg shadow-md transition hover:scale-110';
-		el.textContent = p.kind === 'photo' ? '📷' : postKinds[p.kind].icon;
+		face.className =
+			'flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-card text-lg shadow-md transition-transform group-hover:scale-110';
+		face.textContent = p.kind === 'photo' ? '📷' : postKinds[p.kind].icon;
 		return el;
 	}
 
