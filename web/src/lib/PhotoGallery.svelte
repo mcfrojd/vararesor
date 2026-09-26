@@ -1,10 +1,20 @@
 <script lang="ts">
 	import Icon from './Icon.svelte';
-	import { offline } from './offline.svelte';
+	import { offline, type PendingPhoto } from './offline.svelte';
 	import type { Photo } from './pb';
 	import { photoUrl, sortPhotos } from './photos';
 
-	let { photos, postId }: { photos: Photo[]; postId: string } = $props();
+	let {
+		photos,
+		pending,
+		compact = false
+	}: {
+		photos: Photo[];
+		/** Små miniatyrer i rader om fyra (t.ex. i dagsöversikten), i stället för stora bilder. */
+		compact?: boolean;
+		/** Vilka bilder i kön som hör hit (t.ex. samma inlägg, eller dagen). */
+		pending: (p: PendingPhoto) => boolean;
+	} = $props();
 
 	interface Shown {
 		id: string;
@@ -26,7 +36,7 @@
 			pending: false
 		})),
 		...offline.photos
-			.filter((p) => p.post === postId && !photos.some((x) => x.id === p.id))
+			.filter((p) => pending(p) && !photos.some((x) => x.id === p.id))
 			.map((p) => ({ id: p.id, thumb: p.thumbUrl, web: p.thumbUrl, original: '', taken: '', pending: true }))
 	]);
 
@@ -77,11 +87,20 @@
 <svelte:window onkeydown={onkey} />
 
 {#if all.length > 0}
-	<ul class="grid gap-1.5 {all.length === 1 ? 'grid-cols-1' : all.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}">
+	{@const big = !compact && all.length === 1}
+	<ul
+		class="grid gap-1.5 {compact
+			? 'grid-cols-4 sm:grid-cols-6'
+			: all.length === 1
+				? 'grid-cols-1'
+				: all.length === 2
+					? 'grid-cols-2'
+					: 'grid-cols-3'}"
+	>
 		{#each all as p, i (p.id)}
-			<li class="relative overflow-hidden rounded-2xl bg-field {all.length === 1 ? 'aspect-[4/3]' : 'aspect-square'}">
+			<li class="relative overflow-hidden bg-field {compact ? 'rounded-xl' : 'rounded-2xl'} {big ? 'aspect-[4/3]' : 'aspect-square'}">
 				<button type="button" onclick={() => (open = i)} class="block h-full w-full" aria-label="Visa bild {i + 1} av {all.length}">
-					<img src={all.length === 1 ? p.web : p.thumb} alt="" loading="lazy" class="h-full w-full object-cover" />
+					<img src={big ? p.web : p.thumb} alt="" loading="lazy" class="h-full w-full object-cover" />
 				</button>
 				{#if p.pending}
 					<span class="absolute bottom-1.5 left-1.5 rounded-full bg-ink/70 px-2 py-0.5 text-[10px] font-semibold text-paper">

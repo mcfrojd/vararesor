@@ -15,6 +15,7 @@
 	} from '$lib/format';
 	import type { Post, Trip } from '$lib/pb';
 	import PostCard from '$lib/PostCard.svelte';
+	import PhotoGallery from '$lib/PhotoGallery.svelte';
 	import { postKinds } from '$lib/posts';
 	import { dayWeather, weatherInfo } from '$lib/weather';
 	import WeatherPill from '$lib/WeatherPill.svelte';
@@ -56,12 +57,15 @@
 	const tripById = $derived(Object.fromEntries(data.trips.map((t) => [t.id, t])));
 
 	const selectedPosts = $derived(postsByDay[selected] ?? []);
+	// Bilder som bara hör till en dag (inte ett inlägg).
+	const photoDays = $derived(new Set(data.dayPhotos.map((p) => p.day.slice(0, 10))));
+	const selectedPhotos = $derived(data.dayPhotos.filter((p) => p.day.slice(0, 10) === selected));
 	const selectedTrips = $derived(tripsByDay[selected] ?? []);
 	const selectedWeather = $derived(dayWeather(selectedPosts));
 
 	/** Små ikoner för dagens inlägg: en per typ, högst tre. */
-	function kindIcons(posts: Post[]): string[] {
-		return [...new Set(posts.map((p) => postKinds[p.kind].icon))].slice(0, 3);
+	function kindIcons(posts: Post[], photos = false): string[] {
+		return [...new Set([...posts.map((p) => postKinds[p.kind].icon), ...(photos ? ['📷'] : [])])].slice(0, 3);
 	}
 </script>
 
@@ -132,9 +136,9 @@
 						{weatherInfo(w.code).icon}
 					</span>
 				{/if}
-				{#if posts.length}
+				{#if posts.length || photoDays.has(d)}
 					<span class="mt-auto mb-1 text-[11px] leading-none tracking-tighter" aria-hidden="true">
-						{kindIcons(posts).join('')}
+						{kindIcons(posts, photoDays.has(d)).join('')}
 					</span>
 				{/if}
 			</button>
@@ -168,6 +172,13 @@
 		</ul>
 	{/if}
 
+	{#if selectedPhotos.length > 0}
+		<div class="card mb-3 p-3">
+			<p class="label mb-2">📷 Dagens bilder</p>
+			<PhotoGallery compact photos={selectedPhotos} pending={(p) => !p.post && p.day === selected} />
+		</div>
+	{/if}
+
 	{#if selectedPosts.length > 0}
 		<ul class="space-y-3">
 			{#each selectedPosts as post (post.id)}
@@ -179,7 +190,7 @@
 				</li>
 			{/each}
 		</ul>
-	{:else}
+	{:else if selectedPhotos.length === 0}
 		<p class="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
 			{selectedTrips.length ? 'Inga inlägg den här dagen än.' : 'Ingen resa den här dagen.'}
 		</p>

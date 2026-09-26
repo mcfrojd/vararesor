@@ -21,6 +21,7 @@
 	import BackLink from '$lib/BackLink.svelte';
 	import Fab from '$lib/Fab.svelte';
 	import Icon from '$lib/Icon.svelte';
+	import PhotoGallery from '$lib/PhotoGallery.svelte';
 
 	let { data } = $props();
 
@@ -60,7 +61,24 @@
 			return acc;
 		}, {})
 	);
-	const days = $derived(tripDays(trip.start_date, trip.end_date, Object.keys(postsByDay)));
+	// Bilder som bara hör till dagen (uppladdade och i kön).
+	const dayPhotosByDay = $derived(
+		data.dayPhotos.reduce<Record<string, typeof data.dayPhotos>>((acc, ph) => {
+			(acc[ph.day.slice(0, 10)] ??= []).push(ph);
+			return acc;
+		}, {})
+	);
+	const pendingDays = $derived(
+		offline.photos.filter((p) => p.trip === trip.id && !p.post).map((p) => p.day)
+	);
+	const hasDayPhotos = (day: string) => !!dayPhotosByDay[day] || pendingDays.includes(day);
+	const days = $derived(
+		tripDays(trip.start_date, trip.end_date, [
+			...Object.keys(postsByDay),
+			...Object.keys(dayPhotosByDay),
+			...pendingDays
+		])
+	);
 	const todayDay = today();
 
 	// Kartan: filter för typ, period och spår. Sparas inte; varje resa börjar med allt.
@@ -68,8 +86,7 @@
 	const located = $derived(allPosts.filter((p) => hasLocation(p.location)));
 	const postById = $derived(Object.fromEntries(allPosts.map((p) => [p.id, p])));
 	const locatedPhotos = $derived(
-		allPosts
-			.flatMap((p) => p.expand?.photos_via_post ?? [])
+		[...allPosts.flatMap((p) => p.expand?.photos_via_post ?? []), ...data.dayPhotos]
 			.filter((ph) => photoLocation(ph, postById[ph.post]))
 	);
 	const photosShown = $derived(photosInRange(locatedPhotos, filter));
@@ -160,7 +177,12 @@
 {/if}
 
 <section class="mt-10">
-	<h2 class="title mb-4 text-3xl">Dagar</h2>
+	<div class="mb-4 flex items-center justify-between gap-3">
+		<h2 class="title text-3xl">Dagar</h2>
+		<a href="/trips/{trip.id}/photos" class="btn-small shrink-0">
+			<Icon name="image" class="h-4 w-4" />Lägg till bilder
+		</a>
+	</div>
 
 	{#if days.length === 0}
 		<div class="card px-6 py-10 text-center text-muted">
@@ -208,10 +230,20 @@
 								</li>
 							{/each}
 						</ul>
-					{:else}
+					{:else if !hasDayPhotos(day)}
 						<p class="rounded-2xl border border-dashed border-line px-4 py-3 text-sm text-muted">
 							Inget än.
 						</p>
+					{/if}
+					{#if hasDayPhotos(day)}
+						<div class="card mt-3 p-3">
+							<p class="label mb-2">📷 Dagens bilder</p>
+							<PhotoGallery
+								compact
+								photos={dayPhotosByDay[day] ?? []}
+								pending={(p) => p.trip === trip.id && !p.post && p.day === day}
+							/>
+						</div>
 					{/if}
 				</li>
 			{/each}

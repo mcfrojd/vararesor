@@ -148,7 +148,10 @@
 		const savePhotos = (postId: string) =>
 			addedPhotos.length === 0
 				? Promise.resolve()
-				: enqueuePhotos(addedPhotos, { trip: tripId, post: postId, author: auth.user?.id ?? '', day });
+				: enqueuePhotos(
+						addedPhotos.map((photo) => ({ photo, post: postId, day })),
+						{ trip: tripId, author: auth.user?.id ?? '' }
+					);
 		try {
 			if (initial) {
 				const saved = await pb.collection('posts').update<Post>(initial.id, data, { signal: timeout() });

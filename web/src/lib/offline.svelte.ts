@@ -49,8 +49,10 @@ export interface QueuedPhoto {
 /** Det sidorna behöver veta om en köad bild (utan de stora filerna). */
 export interface PendingPhoto {
 	id: string;
+	/** Tomt för bilder som bara hör till dagen. */
 	post: string;
 	trip: string;
+	day: string;
 	stage: QueuedPhoto['stage'];
 	error?: string;
 	/** Lokal adress till miniatyren (blob:). */
@@ -99,6 +101,7 @@ async function refresh() {
 			return {
 				id: p.id,
 				post: p.data.post,
+				day: p.data.day.slice(0, 10),
 				trip: p.data.trip,
 				stage: p.stage,
 				error: p.error,
@@ -142,16 +145,25 @@ export async function removeQueued(id: string) {
 }
 
 /** Lägger bilder i kön. De skickas direkt om det finns nät. */
-export async function enqueuePhotos(photos: PreparedPhoto[], base: Pick<PhotoData, 'trip' | 'post' | 'author' | 'day'>) {
+/** En bild att lägga i kön och vart den ska: ett inlägg, eller bara dagen (post = ''). */
+export interface PhotoToQueue {
+	photo: PreparedPhoto;
+	post: string;
+	day: string;
+}
+
+export async function enqueuePhotos(items: PhotoToQueue[], base: Pick<PhotoData, 'trip' | 'author'>) {
 	const now = Date.now();
 	await db.photos.bulkPut(
-		photos.map((p, i) => {
+		items.map(({ photo: p, post, day }, i) => {
 			const id = newId();
 			return {
 				id,
 				data: {
 					...base,
 					id,
+					post,
+					day,
 					taken: p.taken,
 					taken_at: p.takenAt,
 					width: p.width,
@@ -241,7 +253,7 @@ export async function sync() {
 		if (navigator.onLine)
 			for (const item of await db.photos.orderBy('queuedAt').toArray()) {
 				if (item.error) continue;
-				if (await db.queue.get(item.data.post)) continue; // inlägget är inte skickat än
+				if (item.data.post && (await db.queue.get(item.data.post))) continue; // inlägget är inte skickat än
 				try {
 					await sendPhoto(item);
 					sent++;

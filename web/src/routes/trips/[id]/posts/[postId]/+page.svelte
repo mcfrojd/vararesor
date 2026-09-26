@@ -86,7 +86,7 @@
 		</div>
 	</div>
 
-	<PhotoGallery photos={post.expand?.photos_via_post ?? []} postId={post.id} />
+	<PhotoGallery photos={post.expand?.photos_via_post ?? []} pending={(p) => p.post === post.id} />
 
 	{#if post.body}<p class="whitespace-pre-line text-[17px] leading-relaxed">{post.body}</p>{/if}
 

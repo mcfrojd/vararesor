@@ -125,9 +125,10 @@ export function photoPoints<T extends Photo>(
 			lat: at.lat,
 			lon: at.lon,
 			kind: 'photo',
-			title: post ? post.title || postKinds[post.kind].label : 'Bild',
+			title: post ? post.title || postKinds[post.kind].label : 'Dagens bilder',
 			subtitle: [trip?.title, n ? `Dag ${n}` : '', formatDay(photo.day)].filter(Boolean).join(' · '),
-			href: `/trips/${photo.trip}/posts/${photo.post}`,
+			// Bilder utan inlägg visas under dagen på resans sida.
+			href: photo.post ? `/trips/${photo.trip}/posts/${photo.post}` : `/trips/${photo.trip}#dag-${photo.day.slice(0, 10)}`,
 			thumb: photoUrl(photo, 'thumb'),
 			count: 1
 		});
