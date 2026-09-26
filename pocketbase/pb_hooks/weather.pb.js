@@ -31,3 +31,10 @@ cronAdd('weather', '17 * * * *', () => {
 	const n = require(`${__hooks}/weather.js`).backfill($app, 30);
 	if (n > 0) $app.logger().info('Väder uppdaterat', 'posts', n);
 });
+
+// Var 10:e minut: väder för boendens nätter som saknas. Utan nätanrop när inget
+// saknas, så att nya boenden (och boenden efter en uppdatering) inte väntar en timme.
+cronAdd('stay-weather', '*/10 * * * *', () => {
+	const n = require(`${__hooks}/weather.js`).backfillStays($app, 10);
+	if (n > 0) $app.logger().info('Väder för boenden', 'antal', n);
+});

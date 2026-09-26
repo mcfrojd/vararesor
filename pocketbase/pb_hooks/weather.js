@@ -222,4 +222,28 @@ function backfill(app, limit) {
 	return done;
 }
 
-module.exports = { update, updateStay, backfill, needsWeather };
+/** Boenden som saknar väder för sina nätter (t.ex. direkt efter en uppdatering av appen). */
+function backfillStays(app, limit) {
+	const today = isoDay(new Date());
+	const records = app.findRecordsByFilter(
+		'posts',
+		"kind = 'overnight' && (location.lat != 0 || location.lon != 0)",
+		'-day',
+		500,
+		0
+	);
+	let done = 0;
+	for (const record of records) {
+		if (done >= limit) break;
+		if (!needsStayWeather(record, today)) continue;
+		try {
+			updateStay(app, record);
+			done++;
+		} catch (err) {
+			app.logger().warn('Väder kunde inte hämtas', 'post', record.id, 'error', String(err));
+		}
+	}
+	return done;
+}
+
+module.exports = { update, updateStay, backfill, backfillStays, needsWeather };
