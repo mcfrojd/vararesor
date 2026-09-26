@@ -2,7 +2,7 @@
 	import '../app.css';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { auth } from '$lib/auth.svelte';
+	import { auth, refreshAuth } from '$lib/auth.svelte';
 	import Avatar from '$lib/Avatar.svelte';
 	import Icon, { type IconName } from '$lib/Icon.svelte';
 	import { offline, startSync, waitingLabel } from '$lib/offline.svelte';
@@ -21,6 +21,20 @@
 	// Offline-kön: följ nätstatus och skicka väntande inlägg.
 	$effect(() => {
 		if (auth.user) startSync();
+	});
+
+	// Det egna kontot hämtas på nytt vid start, när appen kommer tillbaka i
+	// förgrunden och när nätet kommer tillbaka (ändringar från en annan enhet).
+	$effect(() => {
+		void refreshAuth(true);
+		const onVisible = () => document.visibilityState === 'visible' && refreshAuth();
+		const onOnline = () => refreshAuth(true);
+		document.addEventListener('visibilitychange', onVisible);
+		window.addEventListener('online', onOnline);
+		return () => {
+			document.removeEventListener('visibilitychange', onVisible);
+			window.removeEventListener('online', onOnline);
+		};
 	});
 
 	const waiting = $derived(waitingLabel());
