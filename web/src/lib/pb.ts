@@ -83,9 +83,9 @@ export interface Photo {
 	taken: string;
 	/** Exakt tidpunkt (UTC) enligt kameran, om den kunde räknas ut. */
 	taken_at: string;
-	/** Från bildens GPS-data ('exif') eller Doris spår ('track'); 0,0 om den saknas. */
+	/** Från bildens GPS-data ('exif'), originalet i Immich ('immich') eller Doris spår ('track'); 0,0 om den saknas. */
 	location: GeoPoint;
-	location_source: '' | 'exif' | 'track';
+	location_source: '' | 'exif' | 'track' | 'immich';
 	width: number;
 	height: number;
 	/** Tomt tills originalet laddats upp. */
