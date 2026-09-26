@@ -56,6 +56,14 @@
 	});
 	const tripById = $derived(Object.fromEntries(data.trips.map((t) => [t.id, t])));
 
+	// Resorna turas om mellan två nyanser (i datumordning), så att det syns var
+	// en resa slutar och nästa börjar även när de ligger tätt.
+	const shades = ['bg-accent-soft', 'bg-amber-soft'];
+	const dots = ['bg-accent', 'bg-amber'];
+	const shadeIndex = $derived(
+		Object.fromEntries(data.trips.filter((t) => t.start_date).map((t, i) => [t.id, i % shades.length]))
+	);
+
 	const selectedPosts = $derived(postsByDay[selected] ?? []);
 	// Bilder som bara hör till en dag (inte ett inlägg).
 	const photoDays = $derived(new Set(data.dayPhotos.map((p) => p.day.slice(0, 10))));
@@ -123,7 +131,7 @@
 					{isSelected
 					? 'bg-rust-soft text-rust'
 					: trips.length
-						? 'bg-accent-soft text-ink hover:brightness-95'
+						? `${shades[shadeIndex[trips[trips.length - 1].id] ?? 0]} text-ink hover:brightness-95`
 						: 'text-ink hover:bg-field'}
 					{inMonth ? '' : 'opacity-35'}
 					{d === todayDay && !isSelected ? 'ring-2 ring-rust/50 ring-inset' : ''}"
@@ -158,7 +166,10 @@
 				{@const n = dayNumber(trip.start_date, selected)}
 				<li class="flex items-center justify-between gap-3 rounded-2xl bg-field px-4 py-3">
 					<a href="/trips/{trip.id}#dag-{selected}" class="min-w-0">
-						<p class="eyebrow">{tripTypes[trip.type].icon} Dag {n}</p>
+						<p class="eyebrow flex items-center gap-1.5">
+							<span class="h-2 w-2 rounded-full {dots[shadeIndex[trip.id] ?? 0]}" aria-hidden="true"></span>
+							{tripTypes[trip.type].icon} Dag {n}
+						</p>
 						<p class="truncate font-semibold text-ink">{trip.title}</p>
 					</a>
 					<a

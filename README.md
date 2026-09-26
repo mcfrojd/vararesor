@@ -252,7 +252,7 @@ Vädret visas som en pastill på inlägget och i dagens rubrik (från första in
 
 ### Kalender
 
-`/kalender` visar en månad i taget, med början på måndag. Dagar under en resa är markerade och visar ikoner för dagens inlägg och väder. Tryck på en dag för att se inläggen och lägga till nya på resan den dagen. Vald dag och månad ligger i adressen.
+`/kalender` visar en månad i taget, med början på måndag. Dagar under en resa är markerade, med två nyanser (grön och sand) som resorna turas om med i datumordning, så att det syns var en resa slutar och nästa börjar. Dagarna visar ikoner för dagens inlägg och väder. Tryck på en dag för att se inläggen och lägga till nya på resan den dagen. Vald dag och månad ligger i adressen.
 
 Dagarna räknas fram ur resans datum (dag 1 = startdatum) och inläggens `day`; det finns ingen egen tabell för dagar än. Den kommer med publiceringen, där varje dag behöver egen status, sammanfattning och commit.
 

@@ -20,6 +20,8 @@
 	--color-rust: #a4573a;
 	--color-rust-soft: #f6e3d7;
 	--color-amber: #c4994d;
+	/* Andra nyansen för resor i kalendern, så att resor som följer på varandra skiljs åt. */
+	--color-amber-soft: #f3e9d2;
 	--font-sans: 'Plus Jakarta Sans Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 	--font-serif: 'Newsreader Variable', Georgia, serif;
 	--shadow-soft: 0 10px 30px -8px rgb(25 36 30 / 0.08);
@@ -42,6 +44,7 @@
 		--color-rust: #e3a07f;
 		--color-rust-soft: #3a271e;
 		--color-amber: #d9b36e;
+		--color-amber-soft: #2d2819;
 		--shadow-soft: 0 10px 30px -8px rgb(0 0 0 / 0.5);
 		--shadow-card: 0 20px 48px -12px rgb(0 0 0 / 0.6);
 	}
