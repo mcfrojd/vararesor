@@ -9,7 +9,10 @@
 		photos,
 		pending,
 		compact = false,
-		actions
+		actions,
+		selecting = false,
+		selectable = () => true,
+		selected = $bindable([])
 	}: {
 		photos: Photo[];
 		/** Små miniatyrer i rader om fyra (t.ex. i dagsöversikten), i stället för stora bilder. */
@@ -18,6 +21,12 @@
 		pending: (p: PendingPhoto) => boolean;
 		/** Knappar i visningen för den uppladdade bild som visas (t.ex. "Använd som omslag"). */
 		actions?: Snippet<[Photo]>;
+		/** Välj-läge: ett tryck markerar bilden i stället för att visa den. */
+		selecting?: boolean;
+		/** Vilka bilder som går att välja (t.ex. bara de man får ta bort). */
+		selectable?: (p: Photo) => boolean;
+		/** Id för valda bilder. */
+		selected?: string[];
 	} = $props();
 
 	interface Shown {
@@ -28,11 +37,17 @@
 		original: string;
 		taken: string;
 		pending: boolean;
+		canSelect?: boolean;
+	}
+
+	function toggle(id: string) {
+		selected = selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id];
 	}
 
 	const all = $derived<Shown[]>([
 		...sortPhotos(photos).map((p) => ({
 			id: p.id,
+			canSelect: selectable(p),
 			thumb: photoUrl(p, 'thumb'),
 			web: photoUrl(p, 'web'),
 			original: p.original ? photoUrl(p, 'original') : '',
@@ -107,9 +122,30 @@
 	>
 		{#each all as p, i (p.id)}
 			<li class="relative overflow-hidden bg-field {compact ? 'rounded-xl' : 'rounded-2xl'} {big ? 'aspect-[4/3]' : 'aspect-square'}">
-				<button type="button" onclick={() => (open = i)} class="block h-full w-full" aria-label="Visa bild {i + 1} av {all.length}">
-					<img src={big ? p.web : p.thumb} alt="" loading="lazy" class="h-full w-full object-cover" />
-				</button>
+				{#if selecting}
+					{@const on = selected.includes(p.id)}
+					<button
+						type="button"
+						disabled={!p.canSelect}
+						aria-pressed={on}
+						onclick={() => toggle(p.id)}
+						class="block h-full w-full disabled:opacity-40"
+						aria-label="Välj bild {i + 1} av {all.length}"
+					>
+						<img src={big ? p.web : p.thumb} alt="" loading="lazy" class="h-full w-full object-cover transition {on ? 'scale-90 rounded-xl' : ''}" />
+						{#if p.canSelect}
+							<span
+								class="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white shadow {on
+									? 'bg-rust'
+									: 'bg-black/30'}">{on ? '✓' : ''}</span
+							>
+						{/if}
+					</button>
+				{:else}
+					<button type="button" onclick={() => (open = i)} class="block h-full w-full" aria-label="Visa bild {i + 1} av {all.length}">
+						<img src={big ? p.web : p.thumb} alt="" loading="lazy" class="h-full w-full object-cover" />
+					</button>
+				{/if}
 				{#if p.pending}
 					<span class="absolute bottom-1.5 left-1.5 rounded-full bg-ink/70 px-2 py-0.5 text-[10px] font-semibold text-paper">
 						Väntar på nät

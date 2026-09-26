@@ -13,7 +13,7 @@
 	let error = $state('');
 
 	async function remove() {
-		if (!confirm(`Ta bort "${trip.title}" och alla dess inlägg? Det går inte att ångra.`)) return;
+		if (!confirm(`Ta bort "${trip.title}" och alla dess inlägg? Det går inte att ångra. Bilderna blir kvar under Bilder → Okategoriserat.`)) return;
 		deleting = true;
 		error = '';
 		try {

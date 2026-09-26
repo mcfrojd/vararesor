@@ -60,4 +60,18 @@ function adopt(app, trip) {
 	return n;
 }
 
-module.exports = { tripFor, placePhoto, adopt };
+/**
+ * En resa ska tas bort: dess bilder blir okategoriserade i stället för att
+ * försvinna med resan (och med dess inlägg). Ger antalet.
+ */
+function release(app, trip) {
+	const photos = app.findRecordsByFilter('photos', 'trip = {:trip}', '', 0, 0, { trip: trip.id });
+	for (const photo of photos) {
+		photo.set('trip', '');
+		photo.set('post', '');
+		app.unsafeWithoutHooks().save(photo);
+	}
+	return photos.length;
+}
+
+module.exports = { tripFor, placePhoto, adopt, release };

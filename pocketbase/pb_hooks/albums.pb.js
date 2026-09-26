@@ -23,4 +23,11 @@ function adoptPhotos(e) {
 }
 
 onRecordAfterCreateSuccess(adoptPhotos, 'trips');
+
+// Före borttagningen, i samma transaktion: misslyckas flytten tas resan inte bort.
+onRecordDelete((e) => {
+	const n = require(`${__hooks}/albums.js`).release(e.app, e.record);
+	if (n > 0) e.app.logger().info('Resans bilder till okategoriserat', 'resa', e.record.id, 'antal', n);
+	e.next();
+}, 'trips');
 onRecordAfterUpdateSuccess(adoptPhotos, 'trips');

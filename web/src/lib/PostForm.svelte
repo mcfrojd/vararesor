@@ -143,6 +143,10 @@
 	let busy = $state(false);
 
 	const config = $derived(kind ? postKinds[kind] : undefined);
+	const mapsUrl = $derived.by(() => {
+		const at = locationText.trim() ? parseLocation(locationText) : null;
+		return at ? `https://www.google.com/maps/search/?api=1&query=${at.lat},${at.lon}` : '';
+	});
 
 	function toggleFacility(f: string) {
 		const list = details.facilities ?? [];
@@ -499,6 +503,20 @@
 							<Icon name="locate" class="h-4 w-4" />
 							{locating ? 'Söker…' : 'Här'}
 						</button>
+						{#if mapsUrl}
+							<!-- Kolla platsen i Google Maps (öppnas i appen eller en ny flik). -->
+							<a
+								href={mapsUrl}
+								target="_blank"
+								rel="noopener"
+								aria-label="Visa platsen i Google Maps"
+								title="Visa i Google Maps"
+								class="inline-flex shrink-0 items-center gap-1.5 rounded-2xl border border-line bg-field px-3 text-sm font-semibold text-rust transition hover:border-rust/40"
+							>
+								<Icon name="map" class="h-4 w-4" />
+								<span class="hidden sm:inline">Maps</span>
+							</a>
+						{/if}
 					</div>
 					{#if errors.location}<span class="text-sm text-red-600">{errors.location}</span>{/if}
 					{#if locationSource === 'track'}

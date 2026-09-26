@@ -28,6 +28,43 @@
 	let message = $state('');
 	let busy = $state(false);
 
+	/** Den som laddat upp bilden, och resans ägare, får ta bort den. */
+	const canDelete = (p: Photo) => p.author === auth.user?.id || trip?.owner === auth.user?.id;
+	const deletable = $derived(data.photos.filter(canDelete));
+	let selecting = $state(false);
+	let selected = $state<string[]>([]);
+
+	function stopSelecting() {
+		selecting = false;
+		selected = [];
+	}
+
+	async function remove(ids: string[]) {
+		const n = ids.length;
+		if (n === 0) return false;
+		if (!confirm(`Ta bort ${n === 1 ? 'bilden' : `${n} bilder`}? Det går inte att ångra.`)) return false;
+		busy = true;
+		message = '';
+		let done = 0;
+		try {
+			for (const id of ids) {
+				await pb.collection('photos').delete(id);
+				done++;
+			}
+			message = done === 1 ? 'Bilden är borttagen.' : `${done} bilder är borttagna.`;
+		} catch {
+			message = `Kunde inte ta bort ${done ? `alla (${done} av ${n} borttagna)` : 'bilden'}. Finns det nät?`;
+		} finally {
+			busy = false;
+			await invalidateAll();
+		}
+		return true;
+	}
+
+	async function removeSelected() {
+		if (await remove(selected)) stopSelecting();
+	}
+
 	async function useAsCover(photo: Photo) {
 		if (!trip) return;
 		busy = true;
@@ -67,6 +104,8 @@
 		}
 	}
 
+	const round =
+		'flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur transition hover:bg-white/20 disabled:opacity-50';
 	const pill =
 		'inline-flex h-11 items-center gap-1.5 rounded-full bg-white/10 px-4 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20 disabled:opacity-50';
 </script>
@@ -82,17 +121,24 @@
 			{count ? ` · ${count} ${count === 1 ? 'bild' : 'bilder'}` : ''}
 		</p>
 	</div>
-	<div class="flex gap-2">
+	<div class="flex flex-wrap gap-2">
 		{#if trip}
 			<a href="/trips/{trip.id}" class="btn-small"><Icon name="journal" class="h-4 w-4" />Resan</a>
 		{/if}
 		<a href={trip ? `/trips/${trip.id}/photos` : '/bilder/ladda-upp'} class="btn-small">
 			<Icon name="plus" class="h-4 w-4" />Ladda upp
 		</a>
+		{#if deletable.length > 0}
+			<button type="button" onclick={() => (selecting ? stopSelecting() : (selecting = true))} class="btn-small">
+				{#if selecting}<Icon name="x" class="h-4 w-4" />Klar{:else}<Icon name="trash" class="h-4 w-4" />Ta bort{/if}
+			</button>
+		{/if}
 	</div>
 </div>
 
-{#if trip && isOwner}
+{#if selecting}
+	<p class="mb-4 text-sm text-muted">Tryck på bilderna du vill ta bort.</p>
+{:else if trip && isOwner}
 	<p class="mb-4 text-sm text-muted">Öppna en bild och välj <strong>Omslag</strong> för att göra den till resans omslagsbild.</p>
 {:else if !trip && data.photos.length > 0}
 	<p class="mb-4 text-sm text-muted">
@@ -121,8 +167,16 @@
 			photos={data.photos.filter((p) => p.day.slice(0, 10) === day)}
 			pending={(p) => p.trip === tripId && p.day === day}
 			compact
+			{selecting}
+			selectable={canDelete}
+			bind:selected
 		>
 			{#snippet actions(photo)}
+				{#if canDelete(photo)}
+					<button type="button" class={round} disabled={busy} onclick={() => remove([photo.id])} aria-label="Ta bort bilden">
+						<Icon name="trash" class="h-5 w-5" />
+					</button>
+				{/if}
 				{#if trip && isOwner}
 					<button type="button" class={pill} disabled={busy} onclick={() => useAsCover(photo)}>
 						<Icon name="image" class="h-4 w-4" />Omslag
@@ -144,3 +198,13 @@
 		</PhotoGallery>
 	</section>
 {/each}
+
+{#if selecting}
+	<!-- Fast ovanför flikraden, med egen bakgrund så att bilderna inte syns igenom. -->
+	<div class="sticky bottom-24 z-20 -mx-4 mt-6 flex gap-3 bg-paper/95 px-4 py-3 backdrop-blur">
+		<button type="button" onclick={removeSelected} disabled={busy || selected.length === 0} class="btn-primary flex-1">
+			{selected.length ? `Ta bort ${selected.length} ${selected.length === 1 ? 'bild' : 'bilder'}` : 'Välj bilder'}
+		</button>
+		<button type="button" onclick={stopSelecting} class="btn-ghost">Avbryt</button>
+	</div>
+{/if}
