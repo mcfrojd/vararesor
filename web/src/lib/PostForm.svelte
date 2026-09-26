@@ -326,7 +326,7 @@
 						? `${chosen.length} vald${chosen.length === 1 ? '' : 'a'}. Tid och plats hämtas från bilden om de är tomma.`
 						: 'Tryck på en bild för att välja den. Tid och plats hämtas från bilden.'}
 				</p>
-				<div class="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+				<div class="grid max-h-80 grid-cols-4 gap-2 overflow-y-auto sm:grid-cols-6">
 					{#each candidates as c (c.id)}
 						{@const on = chosen.includes(c.id)}
 						<button
@@ -334,7 +334,7 @@
 							aria-pressed={on}
 							aria-label="{on ? 'Ta bort' : 'Välj'} bilden{c.taken ? ` från kl. ${c.taken.slice(11, 16)}` : ''}"
 							onclick={() => toggleChosen(c.id)}
-							class="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition {on
+							class="relative aspect-square overflow-hidden rounded-xl border-2 transition {on
 								? 'border-rust'
 								: 'border-transparent opacity-80 hover:opacity-100'}"
 						>

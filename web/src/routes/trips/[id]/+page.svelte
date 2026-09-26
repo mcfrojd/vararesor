@@ -163,7 +163,14 @@
 	<section class="mt-10">
 		<h2 class="title mb-3 text-3xl">Karta</h2>
 		<div class="mb-3">
-			<MapFilter bind:filter {counts} photoCount={photosShown.length} tracksAvailable={hasTracks} />
+			<MapFilter
+				bind:filter
+				{counts}
+				photoCount={photosShown.length}
+				tracksAvailable={hasTracks}
+				{days}
+				tripStart={trip.start_date}
+			/>
 		</div>
 		<TripMap {points} {tracks} connect={tracks.length === 0} />
 		{#if points.length === 0 && tracks.length === 0}

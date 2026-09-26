@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dayNumber, formatDay } from './format';
 	import { rangePresets, type MapFilter } from './mapFilter';
 	import type { PostKind, Trip } from './pb';
 	import { postKinds } from './posts';
@@ -8,7 +9,9 @@
 		counts,
 		photoCount = 0,
 		tracksAvailable = false,
-		trips = []
+		trips = [],
+		days = [],
+		tripStart = ''
 	}: {
 		filter: MapFilter;
 		counts: Record<PostKind, number>;
@@ -18,7 +21,17 @@
 		tracksAvailable?: boolean;
 		/** Resor att välja bland (de som har något att visa). Knapparna visas vid fler än en. */
 		trips?: Pick<Trip, 'id' | 'title'>[];
+		/** Resans dagar (ÅÅÅÅ-MM-DD): då väljer man dag i stället för period. */
+		days?: string[];
+		tripStart?: string;
 	} = $props();
+
+	/** Vald dag, eller tomt för alla dagar. En dag = perioden från och med dagen till och med dagen. */
+	const chosenDay = $derived(filter.range === 'custom' && filter.from && filter.from === filter.to ? filter.from : '');
+	function chooseDay(day: string) {
+		if (!day) filter.range = 'all';
+		else Object.assign(filter, { range: 'custom', from: day, to: day });
+	}
 
 	function toggleTrip(id: string) {
 		filter.hiddenTrips = filter.hiddenTrips.includes(id)
@@ -117,6 +130,28 @@
 		</div>
 	{/if}
 
+	{#if days.length > 0}
+		<div
+			class="no-scrollbar -mx-4 flex items-center gap-1 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0"
+			role="group"
+			aria-label="Dag"
+		>
+			{#each ['', ...days] as d (d)}
+				{@const n = d ? dayNumber(tripStart, d) : 0}
+				<button
+					type="button"
+					aria-pressed={chosenDay === d}
+					title={d ? formatDay(d) : undefined}
+					onclick={() => chooseDay(d)}
+					class="shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-sm font-medium transition {chosenDay === d
+						? 'bg-ink text-paper'
+						: 'text-muted hover:text-ink'}"
+				>
+					{d ? (n ? `Dag ${n}` : formatDay(d)) : 'Alla dagar'}
+				</button>
+			{/each}
+		</div>
+	{:else}
 	<div class="flex flex-wrap items-center gap-1" role="group" aria-label="Tidsperiod">
 		{#each rangePresets as r (r.value)}
 			<button
@@ -132,7 +167,9 @@
 		{/each}
 	</div>
 
-	{#if filter.range === 'custom'}
+	{/if}
+
+	{#if filter.range === 'custom' && days.length === 0}
 		<div class="flex items-center gap-2">
 			<input type="date" aria-label="Från" bind:value={filter.from} class="{input} min-w-0 flex-1" />
 			<span class="text-muted">–</span>

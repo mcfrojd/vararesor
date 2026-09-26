@@ -109,7 +109,7 @@
 		style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom))"
 	>
 		<div
-			class="mx-auto grid max-w-md grid-cols-4 gap-1 rounded-3xl border border-line bg-card/90 p-1.5 shadow-card backdrop-blur-md"
+			class="mx-auto grid max-w-3xl grid-cols-4 gap-1 rounded-3xl border border-line bg-card/90 p-1.5 shadow-card backdrop-blur-md"
 		>
 			{#each tabs as tab (tab.href)}
 				{@const active = tab.match(path)}

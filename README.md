@@ -222,7 +222,7 @@ vararesor/
 - **Inlägg:** liten karta över platsen, plus länk till OpenStreetMap.
 - **/karta:** alla platser från alla resor man har tillgång till.
 
-- **Filter** (på resans karta och /karta): välj typer av inlägg (övernattning, mat, sevärt, anteckningar), GPS-spår av/på, och period: allt, senaste 3 dagarna, veckan, månaden eller valfria datum. Bilder av/på. Perioden gäller inläggens och bildernas dag. Knapparna visar antal inom perioden. På /karta finns också en rad med resorna: slå av och på enskilda resor, *Alla* eller *Ingen* (välj sedan en resa för att se bara den). /karta kommer ihåg filtret på enheten.
+- **Filter** (på resans karta och /karta): välj typer av inlägg (övernattning, mat, sevärt, anteckningar), GPS-spår av/på, och period: allt, senaste 3 dagarna, veckan, månaden eller valfria datum. Bilder av/på. Perioden gäller inläggens och bildernas dag. Knapparna visar antal inom perioden. På /karta finns också en rad med resorna: slå av och på enskilda resor, *Alla* eller *Ingen* (välj sedan en resa för att se bara den). På resans karta väljer man i stället dag: *Alla dagar*, *Dag 1*, *Dag 2* … /karta kommer ihåg filtret på enheten.
 - **Spår på /karta:** för husbilsresornas dagar inom perioden, högst de 60 senaste dagarna åt gången.
 
 Kartbilderna hämtas från OpenFreeMap och sparas inte offline än.
