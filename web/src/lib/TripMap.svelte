@@ -93,6 +93,13 @@
 				// Ett finger scrollar sidan; två fingrar flyttar kartan.
 				cooperativeGestures: true
 			});
+			// OpenFreeMaps stil pekar på några symboler som saknas i dess sprite
+			// (t.ex. "circle-11", "wood-pattern"). En osynlig ersättare i stället för
+			// varningar i konsolen; de syns ändå inte.
+			const map_ = m;
+			map_.setMissingStyleImageResolver((id) => {
+				if (!map_.hasImage(id)) map_.addImage(id, { width: 1, height: 1, data: new Uint8Array(4) });
+			});
 			m.addControl(new NavigationControl({ showCompass: false }));
 			m.on('load', () => {
 				// Källhänvisningen startar utfälld och täcker små kartor; ⓘ visar den.
