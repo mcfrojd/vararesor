@@ -50,6 +50,10 @@
 	let rating = $state(initial?.rating ?? 0);
 	let price = $state(initial?.price ?? '');
 	let locationText = $state(hasLocation(initial?.location) ? formatLocation(initial.location) : '');
+	// Var positionen kommer ifrån. 'manual' när vi skrivit, tryckt "Här" eller
+	// tömt fältet: då rör servern den aldrig. Tom position utan 'manual' kan
+	// servern fylla i från Doris spår.
+	let locationSource = $state<NonNullable<Post['location_source']>>(initial?.location_source ?? '');
 	let details = $state<PostDetails>({ facilities: [], ...(initial?.details ?? {}) });
 
 	// Id för ett nytt inlägg bestäms en gång, så att ett nytt försök efter ett fel
@@ -79,6 +83,7 @@
 		navigator.geolocation.getCurrentPosition(
 			(pos) => {
 				locationText = formatLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+				locationSource = 'manual';
 				locating = false;
 			},
 			() => {
@@ -134,6 +139,7 @@
 			rating: config.rated ? rating : 0,
 			price: config.priceLabel ? price.trim() : '',
 			location,
+			location_source: locationSource,
 			details: cleanDetails(kind)
 		};
 
@@ -142,11 +148,7 @@
 		const savePhotos = (postId: string) =>
 			addedPhotos.length === 0
 				? Promise.resolve()
-				: enqueuePhotos(
-						addedPhotos,
-						{ trip: tripId, post: postId, author: auth.user?.id ?? '', day },
-						hasLocation(location) ? location : null
-					);
+				: enqueuePhotos(addedPhotos, { trip: tripId, post: postId, author: auth.user?.id ?? '', day });
 		try {
 			if (initial) {
 				const saved = await pb.collection('posts').update<Post>(initial.id, data, { signal: timeout() });
@@ -360,6 +362,7 @@
 					<div class="flex gap-2">
 						<input
 							bind:value={locationText}
+							oninput={() => (locationSource = 'manual')}
 							inputmode="decimal"
 							placeholder="Lägg till plats? (lat, lon)"
 							aria-label="Position"
@@ -376,6 +379,11 @@
 						</button>
 					</div>
 					{#if errors.location}<span class="text-sm text-red-600">{errors.location}</span>{/if}
+					{#if locationSource === 'track'}
+						<p class="text-xs text-muted">Från Doris GPS-spår. Ändra om ni var någon annanstans.</p>
+					{:else if locationSource === 'photo'}
+						<p class="text-xs text-muted">Från bildens GPS.</p>
+					{/if}
 				</div>
 			{/if}
 
@@ -397,7 +405,10 @@
 				bind:removed={removedPhotos}
 				bind:busy={preparing}
 				onlocation={(p) => {
-					if (config.located && !locationText.trim()) locationText = formatLocation(p);
+					if (config.located && !locationText.trim() && locationSource !== 'manual') {
+						locationText = formatLocation(p);
+						locationSource = 'photo';
+					}
 				}}
 			/>
 		</div>

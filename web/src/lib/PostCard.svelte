@@ -53,6 +53,7 @@
 			{#if hasLocation(post.location)}
 				<p class="mt-0.5 flex items-center gap-1 text-[11px] text-rust/70">
 					<Icon name="pin" class="h-3 w-3" />{formatLocation(post.location)}
+					{#if post.location_source === 'track'}<span class="text-muted">· Doris spår</span>{/if}
 				</p>
 			{/if}
 		</div>

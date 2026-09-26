@@ -80,6 +80,7 @@
 					class="mt-0.5 inline-flex items-center gap-1 text-xs text-rust/70 hover:underline"
 				>
 					<Icon name="pin" class="h-3 w-3" />{formatLocation(post.location)}
+					{#if post.location_source === 'track'}<span class="text-muted">· från Doris spår</span>{/if}
 				</a>
 			{/if}
 		</div>

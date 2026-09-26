@@ -16,6 +16,8 @@ export interface PreparedPhoto {
 	height: number;
 	/** "ÅÅÅÅ-MM-DD TT:MM" enligt kameran, eller tomt. */
 	taken: string;
+	/** Tidpunkten i UTC (ISO), eller tomt. */
+	takenAt: string;
 	/** Från bildens GPS-data, eller null. */
 	location: GeoPoint | null;
 }
@@ -82,31 +84,50 @@ function forceWasm(): boolean {
 	}
 }
 
-/** Tid och plats ur bildens EXIF. Många mobiler tar bort platsen vid uppladdning från webben. */
-async function readExif(file: File): Promise<Pick<PreparedPhoto, 'taken' | 'location'>> {
+/**
+ * Tid och plats ur bildens EXIF. Många mobiler tar bort platsen vid
+ * uppladdning från webben; då kan servern ta den ur Doris spår i stället,
+ * med hjälp av den exakta tidpunkten.
+ */
+async function readExif(file: File): Promise<Pick<PreparedPhoto, 'taken' | 'takenAt' | 'location'>> {
 	try {
 		const { default: exifr } = await import('exifr');
 		const [tags, gps] = await Promise.all([
-			exifr.parse(file, ['DateTimeOriginal', 'CreateDate']).catch(() => null),
+			// Råa värden: klockslaget som text och tidszonen separat (t.ex. "+02:00").
+			exifr
+				.parse(file, {
+					pick: ['DateTimeOriginal', 'CreateDate', 'OffsetTimeOriginal', 'OffsetTime'],
+					reviveValues: false
+				})
+				.catch(() => null),
 			exifr.gps(file).catch(() => null)
 		]);
-		const date: unknown = tags?.DateTimeOriginal ?? tags?.CreateDate;
 		const lat = Number(gps?.latitude);
 		const lon = Number(gps?.longitude);
 		const location = Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
 		return {
-			taken: date instanceof Date && !isNaN(date.getTime()) ? localStamp(date) : '',
+			...cameraTime(tags?.DateTimeOriginal ?? tags?.CreateDate, tags?.OffsetTimeOriginal ?? tags?.OffsetTime),
 			location: hasLocation(location) ? location : null
 		};
 	} catch {
-		return { taken: '', location: null };
+		return { taken: '', takenAt: '', location: null };
 	}
 }
 
-/** exifr tolkar kamerans klockslag som lokal tid, så det formateras tillbaka likadant. */
-function localStamp(d: Date): string {
-	const p = (n: number) => String(n).padStart(2, '0');
-	return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+/**
+ * Kamerans klockslag ("ÅÅÅÅ:MM:DD TT:MM:SS") och tidszon ("+02:00"). Utan
+ * tidszon antas mobilens nuvarande tidszon.
+ */
+export function cameraTime(raw: unknown, offset: unknown): { taken: string; takenAt: string } {
+	const m = typeof raw === 'string' && raw.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+	if (!m) return { taken: '', takenAt: '' };
+	const [y, mo, d, h, mi, s] = m.slice(1).map(Number);
+	const taken = `${m[1]}-${m[2]}-${m[3]} ${m[4]}:${m[5]}`;
+	const o = typeof offset === 'string' && offset.match(/^([+-])(\d{2}):?(\d{2})$/);
+	const ms = o
+		? Date.UTC(y, mo - 1, d, h, mi, s) - (o[1] === '-' ? -1 : 1) * (Number(o[2]) * 60 + Number(o[3])) * 60_000
+		: new Date(y, mo - 1, d, h, mi, s).getTime();
+	return { taken, takenAt: isNaN(ms) ? '' : new Date(ms).toISOString() };
 }
 
 export function photoUrl(photo: Photo, size: 'thumb' | 'web' | 'original' = 'web'): string {

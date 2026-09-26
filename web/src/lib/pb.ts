@@ -58,6 +58,8 @@ export interface Post {
 	rating: number;
 	price: string;
 	location: GeoPoint;
+	/** Var positionen kommer ifrån: '' okänt, 'manual' satt av oss, 'photo' från en bild, 'track' från Doris spår. */
+	location_source?: '' | 'manual' | 'photo' | 'track';
 	details: PostDetails | null;
 	/** Väder för dagen och platsen, satt av servern. */
 	weather?: Weather | null;
@@ -79,8 +81,11 @@ export interface Photo {
 	day: string;
 	/** När bilden togs, "ÅÅÅÅ-MM-DD TT:MM", om kameran sparat det. */
 	taken: string;
-	/** Från bildens GPS-data; 0,0 om den saknas. */
+	/** Exakt tidpunkt (UTC) enligt kameran, om den kunde räknas ut. */
+	taken_at: string;
+	/** Från bildens GPS-data ('exif') eller Doris spår ('track'); 0,0 om den saknas. */
 	location: GeoPoint;
+	location_source: '' | 'exif' | 'track';
 	width: number;
 	height: number;
 	/** Tomt tills originalet laddats upp. */

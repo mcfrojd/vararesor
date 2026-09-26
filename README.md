@@ -159,7 +159,7 @@ Så fungerar det i appen nu:
 
 - **Lägga till:** i formuläret för inlägg, under "Bilder". Man kan välja flera bilder på en gång, från kameran eller biblioteket.
 - **I mobilen** läses bilden in rättvänd och skalas till två webp-filer: `web` (längsta sida 1600 px, för att visa i appen) och `thumb` (480 px, för listor och kartan). Chrome och Firefox skapar webp själva; Safari kan inte, så där används en webp-kodare i WebAssembly (`@jsquash/webp`), som följer med appen och fungerar offline.
-- **EXIF:** tid och GPS läses ur bilden (`exifr`). Har inlägget ingen position föreslås bildens. Saknar bilden GPS (många mobiler tar bort den vid uppladdning från webben) används inläggets position på kartan.
+- **EXIF:** tid (med tidszon) och GPS läses ur bilden (`exifr`). Har inlägget ingen position föreslås bildens. Saknar bilden GPS (många mobiler tar bort den vid uppladdning från webben) tar servern positionen ur Doris spår vid bildens tidpunkt (se Karta). Går inte det heller visas bilden vid inläggets position.
 - **Uppladdning** går alltid via kön på enheten, i två steg: först de små webp-filerna (bilden syns direkt), sedan originalet. Utan nät väntar bilderna i kön; de skickas efter sitt inlägg.
 - **Visa:** miniatyrer på inläggskorten, galleri på inlägget med helskärm (svep, piltangenter, tillbaka-knappen stänger) och länk till originalet. På kartan visas bilderna som miniatyrer, grupperade per inlägg och plats, med ett eget filter.
 - **Offline:** miniatyrer och webbilder som visats cachas; originalen cachas inte.
@@ -208,12 +208,14 @@ vararesor/
 |------------|----------|
 | `users` | Familjens konton (`name`, `email`, `avatar`). Egen registrering är avstängd; konton skapas i admin. Inloggade ser varandras namn och avatar (för att kunna välja deltagare), men e-post syns bara för en själv. |
 | `trips` | Resor: `title`, `type` (`husbil` / `semester` / `egen`), `start_date`, `end_date`, `description`, `cover`, `owner`, `participants`. Syns bara för ägaren och deltagarna. Bara ägaren kan ändra och ta bort. |
-| `photos` | Bilder: `trip`, `post`, `author`, `day`, `taken` (ÅÅÅÅ-MM-DD TT:MM enligt kameran), `location` (geoPoint från EXIF, annars 0,0), `width`, `height`, `original` (orört, upp till 60 MB), `web` och `thumb` (webp). Samma behörighet som inläggen; bara den som laddat upp ändrar. Tas bort med inlägget och resan. |
-| `posts` | Inlägg: `trip`, `author`, `kind` (`overnight` / `food` / `sight` / `note`), `day`, `time` (valfri, TT:MM; utan tid sorteras inlägget efter när det skapades), `title`, `category`, `body`, `rating` (0–5), `price`, `location` (geoPoint), `weather` (JSON, sätts av servern), `details` (JSON med mallens egna fält: faciliteter, betalsätt, underlag, utsikt, ljudnivå, vad vi åt, öppettider). Syns för resans ägare och deltagare, som också kan skriva. Bara författaren ändrar; författaren eller resans ägare kan ta bort. Tas bort med resan. |
+| `photos` | Bilder: `trip`, `post`, `author`, `day`, `taken` (ÅÅÅÅ-MM-DD TT:MM enligt kameran), `taken_at` (samma tidpunkt i UTC), `location` (geoPoint från EXIF eller Doris spår, annars 0,0), `location_source` (`exif`/`track`), `width`, `height`, `original` (orört, upp till 60 MB), `web` och `thumb` (webp). Samma behörighet som inläggen; bara den som laddat upp ändrar. Tas bort med inlägget och resan. |
+| `posts` | Inlägg: `trip`, `author`, `kind` (`overnight` / `food` / `sight` / `note`), `day`, `time` (valfri, TT:MM; utan tid sorteras inlägget efter när det skapades), `title`, `category`, `body`, `rating` (0–5), `price`, `location` (geoPoint), `location_source` (`manual`/`photo`/`track`), `weather` (JSON, sätts av servern), `details` (JSON med mallens egna fält: faciliteter, betalsätt, underlag, utsikt, ljudnivå, vad vi åt, öppettider). Syns för resans ägare och deltagare, som också kan skriva. Bara författaren ändrar; författaren eller resans ägare kan ta bort. Tas bort med resan. |
 
 ### Karta
 
 - **Resans sida:** inläggen med position som markörer. Husbilsresor visar också Doris körda spår (heldragen linje); andra resor får en streckad linje mellan inläggen i tidsordning.
+- **Spåren** läses i första hand som GPX (`husbilendoris.se/tracks/gpx/doris-ÅÅÅÅ-MM-DD.gpx`, med tid på varje punkt) och annars som KML (`tracks/doris-ÅÅÅÅ-MM-DD.kml`). En fil per svensk kalenderdag; gårdagens spår läggs ut på morgonen.
+- **Position från spåret:** på husbilsresor får bilder utan GPS och inlägg med tid men utan position den plats där Doris var vid den tidpunkten (`pb_hooks/tracks.js`). Inläggets tid tolkas som svensk tid, bildens tid tas ur EXIF med tidszon. Positionen märks "från Doris spår", eftersom den visar var bilen stod, inte var vi var. Luckor i spåret på mer än 45 minuter används inte. Ett timjobb (`tracks`) försöker igen för den senaste veckan, eftersom spåret kommer dagen efter. Servern rör aldrig en position vi satt, ändrat eller tömt själva (`location_source = 'manual'`).
 - **Inlägg:** liten karta över platsen, plus länk till OpenStreetMap.
 - **/karta:** alla platser från alla resor man har tillgång till.
 

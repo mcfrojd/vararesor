@@ -24,9 +24,10 @@ export interface QueuedPost {
 }
 
 /** Fälten för en bild, utom filerna. */
-export type PhotoData = Pick<Photo, 'id' | 'trip' | 'post' | 'author' | 'day' | 'taken' | 'width' | 'height'> & {
-	location: Photo['location'];
-};
+export type PhotoData = Pick<
+	Photo,
+	'id' | 'trip' | 'post' | 'author' | 'day' | 'taken' | 'taken_at' | 'width' | 'height' | 'location' | 'location_source'
+>;
 
 /**
  * En bild som väntar på att laddas upp. Den skickas i två steg: först de små
@@ -141,25 +142,24 @@ export async function removeQueued(id: string) {
 }
 
 /** Lägger bilder i kön. De skickas direkt om det finns nät. */
-export async function enqueuePhotos(
-	photos: PreparedPhoto[],
-	base: Pick<PhotoData, 'trip' | 'post' | 'author' | 'day'>,
-	fallback: Photo['location'] | null
-) {
+export async function enqueuePhotos(photos: PreparedPhoto[], base: Pick<PhotoData, 'trip' | 'post' | 'author' | 'day'>) {
 	const now = Date.now();
 	await db.photos.bulkPut(
 		photos.map((p, i) => {
 			const id = newId();
-			const at = p.location ?? fallback;
 			return {
 				id,
 				data: {
 					...base,
 					id,
 					taken: p.taken,
+					taken_at: p.takenAt,
 					width: p.width,
 					height: p.height,
-					location: at ? { lat: at.lat, lon: at.lon } : { lat: 0, lon: 0 }
+					// Bara bildens egen position. Saknas den försöker servern med Doris
+					// spår, och annars visas bilden vid inläggets position.
+					location: p.location ? { lat: p.location.lat, lon: p.location.lon } : { lat: 0, lon: 0 },
+					location_source: p.location ? ('exif' as const) : ('' as const)
 				},
 				web: p.web,
 				thumb: p.thumb,

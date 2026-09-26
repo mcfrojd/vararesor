@@ -1,7 +1,9 @@
 /**
  * Doris GPS-spår. En GitHub Action hämtar varje morgon gårdagens spår från
- * Traccar till husbilendoris.se/tracks/doris-ÅÅÅÅ-MM-DD.kml. Filerna är
- * publika och har CORS öppet, så appen läser dem direkt.
+ * Traccar till husbilendoris.se: tracks/gpx/doris-ÅÅÅÅ-MM-DD.gpx (med tid,
+ * finns för fler dagar) och tracks/doris-ÅÅÅÅ-MM-DD.kml (bara linjen).
+ * Filerna är publika och har CORS öppet, så appen läser dem direkt.
+ * GPX används i första hand, KML om GPX saknas.
  */
 const TRACKS_URL = 'https://husbilendoris.se/tracks';
 
@@ -22,18 +24,33 @@ function parseKml(text: string): Line[] {
 		.filter((line) => line.length > 1);
 }
 
+/** Varje <trkseg> i en GPX blir en linje. */
+function parseGpx(text: string): Line[] {
+	const doc = new DOMParser().parseFromString(text, 'application/xml');
+	return [...doc.getElementsByTagName('trkseg')]
+		.map((seg) =>
+			[...seg.getElementsByTagName('trkpt')]
+				.map((pt) => [Number(pt.getAttribute('lon')), Number(pt.getAttribute('lat'))] as [number, number])
+				.filter(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat))
+		)
+		.filter((line) => line.length > 1);
+}
+
+/** Hämtar en spårfil. Saknas den svarar sajten med sin 404-sida i HTML; då blir det null. */
+async function fetchTrack(url: string, type: string, parse: (text: string) => Line[]): Promise<Line[] | null> {
+	const res = await fetch(url);
+	if (!res.ok || !res.headers.get('content-type')?.includes(type)) return null;
+	return parse(await res.text());
+}
+
 // Spåren ändras inte i efterhand, så de hämtas bara en gång per dag och sidvisning.
 const cache = new Map<string, Promise<Line[]>>();
 
 function loadDay(day: string): Promise<Line[]> {
 	let p = cache.get(day);
 	if (!p) {
-		p = fetch(`${TRACKS_URL}/doris-${day}.kml`)
-			.then(async (res) => {
-				// Saknas filen svarar sajten med sin 404-sida i HTML.
-				if (!res.ok || !res.headers.get('content-type')?.includes('kml')) return [];
-				return parseKml(await res.text());
-			})
+		p = fetchTrack(`${TRACKS_URL}/gpx/doris-${day}.gpx`, 'gpx', parseGpx)
+			.then(async (gpx) => gpx ?? (await fetchTrack(`${TRACKS_URL}/doris-${day}.kml`, 'kml', parseKml)) ?? [])
 			.catch(() => {
 				cache.delete(day); // försök igen nästa gång, t.ex. när nätet är tillbaka
 				return [];
