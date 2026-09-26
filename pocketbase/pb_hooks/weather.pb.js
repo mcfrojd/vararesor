@@ -6,7 +6,9 @@
 onRecordAfterCreateSuccess((e) => {
 	e.next();
 	try {
-		require(`${__hooks}/weather.js`).update(e.app, e.record);
+		const weather = require(`${__hooks}/weather.js`);
+		weather.update(e.app, e.record);
+		weather.updateStay(e.app, e.record);
 	} catch (err) {
 		e.app.logger().warn('Väder kunde inte hämtas', 'post', e.record.id, 'error', String(err));
 	}
@@ -15,7 +17,9 @@ onRecordAfterCreateSuccess((e) => {
 onRecordAfterUpdateSuccess((e) => {
 	e.next();
 	try {
-		require(`${__hooks}/weather.js`).update(e.app, e.record);
+		const weather = require(`${__hooks}/weather.js`);
+		weather.update(e.app, e.record);
+		weather.updateStay(e.app, e.record);
 	} catch (err) {
 		e.app.logger().warn('Väder kunde inte hämtas', 'post', e.record.id, 'error', String(err));
 	}

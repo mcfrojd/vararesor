@@ -70,6 +70,8 @@ export interface Post {
 	details: PostDetails | null;
 	/** Väder för dagen och platsen, satt av servern. */
 	weather?: Weather | null;
+	/** Boende: väder för nätterna efter incheckningen, per dag (satt av servern). */
+	stay_weather?: { days?: Record<string, Weather> } | null;
 	created: string;
 	expand?: {
 		author?: User;

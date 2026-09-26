@@ -106,6 +106,97 @@ function update(app, record) {
 	return true;
 }
 
+// ---- Boenden över flera nätter: väder för dagarna efter incheckningen.
+
+function jsonField(record, name) {
+	try {
+		return JSON.parse(record.getString(name) || 'null');
+	} catch (_) {
+		return null;
+	}
+}
+
+/** Plats och dagar (dagen efter incheckning t.o.m. utcheckning) för ett boende, eller null. */
+function stayTarget(record) {
+	if (record.getString('kind') !== 'overnight') return null;
+	const until = String((jsonField(record, 'details') || {}).until || '').slice(0, 10);
+	const t = target(record);
+	if (!t || !until || until <= t.day) return null;
+	return { lat: t.lat, lon: t.lon, from: addDays(t.day, 1), to: until };
+}
+
+/** Dagarna som går att hämta nu (prognosen räcker 16 dagar framåt). */
+function wantedDays(st, today) {
+	const days = [];
+	const last = addDays(today, 15);
+	for (let d = st.from; d <= st.to && d <= last; d = addDays(d, 1)) days.push(d);
+	return days;
+}
+
+function needsStayWeather(record, today) {
+	const st = stayTarget(record);
+	const cur = jsonField(record, 'stay_weather');
+	if (!st) return !!cur;
+	if (!cur || cur.lat !== st.lat || cur.lon !== st.lon || cur.from !== st.from || cur.to !== st.to) return true;
+	return wantedDays(st, today).some((d) => {
+		const w = (cur.days || {})[d];
+		return !w || (!w.final && d < today);
+	});
+}
+
+/** Hämtar väder för flera dagar; äldre dagar från arkivet, resten från prognos-API:t. */
+function fetchDays(lat, lon, days, today) {
+	const out = {};
+	const cut = addDays(today, -80);
+	const groups = [days.filter((d) => d < cut), days.filter((d) => d >= cut)];
+	for (let i = 0; i < groups.length; i++) {
+		const g = groups[i];
+		if (!g.length) continue;
+		const base = i === 0 ? 'https://archive-api.open-meteo.com/v1/archive' : 'https://api.open-meteo.com/v1/forecast';
+		const url =
+			base + '?latitude=' + lat + '&longitude=' + lon + '&daily=' + DAILY +
+			'&start_date=' + g[0] + '&end_date=' + g[g.length - 1] + '&timezone=auto';
+		const res = $http.send({ url: url, method: 'GET', timeout: 10 });
+		if (res.statusCode !== 200 || !res.json || !res.json.daily) throw new Error('Open-Meteo svarade ' + res.statusCode);
+		const d = res.json.daily;
+		(d.time || []).forEach((day, j) => {
+			const v = (key) => (d[key] && d[key][j] !== null && d[key][j] !== undefined ? d[key][j] : null);
+			if (v('temperature_2m_max') === null) return;
+			out[day] = {
+				min: v('temperature_2m_min'),
+				max: v('temperature_2m_max'),
+				mean: v('temperature_2m_mean'),
+				code: v('weather_code'),
+				precip: v('precipitation_sum'),
+				final: day < addDays(today, -1)
+			};
+		});
+	}
+	return out;
+}
+
+/** Uppdaterar vädret för boendets nätter om det behövs. Sparar utan hookar. */
+function updateStay(app, record) {
+	const today = isoDay(new Date());
+	if (!needsStayWeather(record, today)) return false;
+	const st = stayTarget(record);
+	if (!st) {
+		record.set('stay_weather', null);
+		app.unsafeWithoutHooks().save(record);
+		return true;
+	}
+	const days = wantedDays(st, today);
+	record.set('stay_weather', {
+		lat: st.lat,
+		lon: st.lon,
+		from: st.from,
+		to: st.to,
+		days: days.length ? fetchDays(st.lat, st.lon, days, today) : {}
+	});
+	app.unsafeWithoutHooks().save(record);
+	return true;
+}
+
 /** Nattjobb: fyll i väder som saknas och byt prognoser mot riktiga värden. */
 function backfill(app, limit) {
 	const today = isoDay(new Date());
@@ -119,9 +210,10 @@ function backfill(app, limit) {
 	let done = 0;
 	for (const record of records) {
 		if (done >= limit) break;
-		if (!needsWeather(record, today)) continue;
+		if (!needsWeather(record, today) && !needsStayWeather(record, today)) continue;
 		try {
 			update(app, record);
+			updateStay(app, record);
 			done++;
 		} catch (err) {
 			app.logger().warn('Väder kunde inte hämtas', 'post', record.id, 'error', String(err));
@@ -130,4 +222,4 @@ function backfill(app, limit) {
 	return done;
 }
 
-module.exports = { update, backfill, needsWeather };
+module.exports = { update, updateStay, backfill, needsWeather };
